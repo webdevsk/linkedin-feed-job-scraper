@@ -1,3 +1,5 @@
+import { customLog } from "@/utils/customLog"
+
 export default defineBackground(() => {
-  console.log("Hello background!", { id: browser.runtime.id })
+  customLog("Hello background!", { id: browser.runtime.id })
 })

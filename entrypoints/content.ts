@@ -1,4 +1,5 @@
 import { LinkedinPost } from "@/lib/linkedin-post-class"
+import { customError, customLog } from "@/utils/customLog"
 import type { ContentScriptContext } from "wxt/client"
 
 const feedUrlWatchPattern = new MatchPattern("*://*.linkedin.com/feed/*")
@@ -8,7 +9,7 @@ const postParentSelector = "[data-finite-scroll-hotkey-context='FEED']"
 export default defineContentScript({
   matches: ["*://*.linkedin.com/*"],
   main(ctx) {
-    console.log("Injecting content script")
+    customLog("Injecting content script")
 
     // Run if initially on feed page
     if (feedUrlWatchPattern.includes(window.location.href)) mainWatch(ctx)
@@ -24,12 +25,12 @@ export default defineContentScript({
 function mainWatch(ctx: ContentScriptContext) {
   // fetching initial posts
   for (const element of document.querySelectorAll(postSelector)) {
-    new LinkedinPost(element)
+    handleScraping(element)
   }
 
   const rootToObserve = document.querySelector(postParentSelector) ?? document.body
   if (!rootToObserve) {
-    console.error("Could not find root to observe")
+    customError("Could not find root to observe")
     return
   }
 
@@ -39,7 +40,7 @@ function mainWatch(ctx: ContentScriptContext) {
       if (!mutation.addedNodes.length) continue
       for (const node of mutation.addedNodes) {
         if (isElement(node) && node.matches(postSelector)) {
-          new LinkedinPost(node)
+          handleScraping(node)
         }
       }
     }
@@ -52,11 +53,23 @@ function mainWatch(ctx: ContentScriptContext) {
     subtree: true,
   })
   ctx.onInvalidated(() => {
-    console.error("Content script context invalidated. Shutting down...")
+    customError("Content script context invalidated. Shutting down...")
     observer.disconnect()
   })
 }
 
 function isElement(node: Node): node is Element {
   return node.nodeType === Node.ELEMENT_NODE
+}
+
+function handleScraping(element: Element) {
+  // whatever we wanna do with each post
+  const post = new LinkedinPost(element)
+
+  try {
+    const isHiringPost = post.checkIfHiringPost()
+    if (isHiringPost) customLog("is hiring: ", post.element)
+  } catch (error) {
+    customError(error, post.element)
+  }
 }
