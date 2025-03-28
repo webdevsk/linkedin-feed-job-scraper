@@ -1,8 +1,8 @@
 {
-  "extName": {
-    "message": "WXT React Starter"
+  "extension_name": {
+    "message": "Linkedin Feed Job Scraper"
   },
-  "extDescription": {
-    "message": "A WXT React starter project by webdevsk"
+  "extension_description": {
+    "message": "Scrape Job posts from Linkedin Feed"
   }
 }

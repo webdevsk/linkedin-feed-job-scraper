@@ -22,4 +22,10 @@ export default defineConfig([
   { ...pluginReact.configs.flat.recommended, settings: { react: { version: "19" } } },
   pluginReact.configs.flat["jsx-runtime"],
   eslintPluginPrettierRecommended,
+  {
+    rules: {
+      "@typescript-eslint/no-unused-vars": "warn",
+      "eslint/no-unused-vars": "warn",
+    },
+  },
 ])
