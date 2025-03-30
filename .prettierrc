@@ -8,5 +8,6 @@
   "quoteProps": "as-needed",
   "semi": false,
   "trailingComma": "es5",
+  "endOfLine": "lf",
   "plugins": ["prettier-plugin-tailwindcss"]
 }

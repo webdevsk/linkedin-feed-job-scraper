@@ -39,6 +39,7 @@ class JobPostService {
       return { status: STATUS.ERROR, error: "Failed to get job posts" }
     }
   }
+
   async listJobs(): ApiResponse<JobPost[]> {
     try {
       const storage = await jobPostsStorage.getValue()
@@ -64,6 +65,7 @@ class JobPostService {
         storage.set(jobPost.postId, newJobPost)
         data.push(newJobPost)
       }
+
       await jobPostsStorage.setValue(storage)
       return { status: STATUS.SUCCESS, data }
     } catch (error) {
@@ -71,6 +73,7 @@ class JobPostService {
       return { status: STATUS.ERROR, error: "Failed to post job posts" }
     }
   }
+
   async deleteJobs(postIds: JobPost["postId"][]): ApiResponse<undefined> {
     try {
       const storage = await jobPostsStorage.getValue()
@@ -84,6 +87,7 @@ class JobPostService {
       return { status: STATUS.ERROR, error: "Failed to delete job posts" }
     }
   }
+
   async deleteAllJobs(): ApiResponse<undefined> {
     try {
       const storage = await jobPostsStorage.getValue()
