@@ -1,6 +1,6 @@
 import { defineProxyService } from "@webext-core/proxy-service"
 import type { JobPost } from "./storage"
-import { jobPostsStorage } from "./storage"
+import { jobPostSchema, jobPostsStorage } from "./storage"
 
 const STATUS = {
   SUCCESS: "success",
@@ -57,11 +57,11 @@ class JobPostService {
       const storage = await jobPostsStorage.getValue()
 
       for (const jobPost of jobPosts) {
-        const newJobPost = {
+        const newJobPost = jobPostSchema.parse({
           ...jobPost,
           updatedAt: timeStamp,
           firstScrapedAt: storage.get(jobPost.postId)?.firstScrapedAt ?? timeStamp,
-        }
+        })
         storage.set(jobPost.postId, newJobPost)
         data.push(newJobPost)
       }
