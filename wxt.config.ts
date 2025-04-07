@@ -7,7 +7,7 @@ export default defineConfig({
     description: "__MSG_extension_description__",
     default_locale: "en",
     host_permissions: [],
-    permissions: [],
+    permissions: ["storage"],
   },
   modules: ["@wxt-dev/module-react", "@wxt-dev/auto-icons", "@wxt-dev/i18n/module"],
   vite: () => ({

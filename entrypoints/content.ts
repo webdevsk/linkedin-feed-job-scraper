@@ -68,7 +68,12 @@ function handleScraping(element: Element) {
 
   try {
     const isHiringPost = post.checkIfHiringPost()
-    if (isHiringPost) customLog("is hiring: ", post.element)
+    if (isHiringPost) {
+      post.element.insertAdjacentHTML(
+        "beforeend",
+        "<div style='color: red; font-weight: bold; font-size: 1.5rem; position: absolute; top: 0; right: 0; padding: 3.5rem 1rem; display: block; pointer-events: none;'>Hiring</div>"
+      )
+    }
   } catch (error) {
     customError(error, post.element)
   }

@@ -20,3 +20,22 @@ export const jobPostsStorage = storage.defineItem<Map<JobPost["postId"], JobPost
   fallback: new Map(),
   version: 1,
 })
+
+// fetch it from storage
+// periodically update it from a github repo
+const refineKeywords = (keywords: (string | RegExp)[]) =>
+  keywords
+    .map((keyword) => (typeof keyword === "string" ? keyword : keyword.source))
+    .map((keyword) => keyword.replaceAll(/\s+/g, "\\s+"))
+
+export const extensionConfig = {
+  keywordProfiles: {
+    en: refineKeywords([
+      /(?!(you|they))( is|( are|'re)) hiring/,
+      /(?!(you|they))( is|( are|'re)) looking for/,
+      /(?!(you|they))( is|( are|'re)) seeking/,
+      /apply (now|here)/,
+      /join (us|now)/,
+    ]),
+  },
+}

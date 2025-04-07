@@ -1,4 +1,5 @@
 import { customLog } from "@/utils/customLog"
+import { extensionConfig } from "@/utils/storage"
 
 const seeMoreButtonSelector = 'button[aria-label^="see more"]'
 let postBodyNotFoundCounter = 0
@@ -8,8 +9,12 @@ const postBodyNotFoundLimit = 5
 const contentTypeEnums = ["image", "linkedin-video", "article", "entity"] as const
 type ContentType = (typeof contentTypeEnums)[number]
 
-const hiringKeywords = ["hiring", "apply", "looking for"]
-const hiringRegExp = new RegExp(hiringKeywords.join("|").replaceAll(/\s+/g, "\\s+"), "i")
+//Urgent hiring for HR recruiter and team lead
+
+// Will feature profile enable|disable system later
+const keywords = Object.values(extensionConfig.keywordProfiles)
+export const hiringRegExp = new RegExp(keywords.join("|"), "i")
+console.log(hiringRegExp)
 
 /**
  * Class to represent a LinkedIn post
