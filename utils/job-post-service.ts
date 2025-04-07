@@ -51,6 +51,9 @@ class JobPostService {
   }
 
   async postJobs(jobPosts: Omit<JobPost, "updatedAt" | "firstScrapedAt">[]): ApiResponse<JobPost[]> {
+    if (!jobPosts.length) {
+      return { status: STATUS.SUCCESS, data: [] }
+    }
     try {
       const data: JobPost[] = []
       const timeStamp = new Date().toISOString()
@@ -75,6 +78,9 @@ class JobPostService {
   }
 
   async deleteJobs(postIds: JobPost["postId"][]): ApiResponse<undefined> {
+    if (!postIds.length) {
+      return { status: STATUS.SUCCESS, data: undefined }
+    }
     try {
       const storage = await jobPostsStorage.getValue()
       for (const postId of postIds) {

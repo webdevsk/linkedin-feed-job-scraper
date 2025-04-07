@@ -1,12 +1,17 @@
 import { z } from "zod"
 export const jobPostSchema = z.object({
   postId: z.string(),
-  content: z.string(),
-  author: z.string(),
+  postBody: z.string(),
+  postContents: z.array(
+    z.object({
+      url: z.string().url(),
+      type: z.string(),
+    })
+  ),
+  postAuthor: z.string(),
   postedAt: z.string().datetime(),
   firstScrapedAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
-  url: z.string().url(),
 })
 
 export type JobPost = z.infer<typeof jobPostSchema>
