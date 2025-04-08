@@ -12,7 +12,8 @@ type ContentType = (typeof contentTypeEnums)[number]
 //Urgent hiring for HR recruiter and team lead
 
 // Will feature profile enable|disable system later
-const keywords = Object.values(extensionConfig.keywordProfiles)
+const keywords: string[] = Object.values(extensionConfig.keywordProfiles).flat()
+console.log(keywords)
 export const hiringRegExp = new RegExp(keywords.join("|"), "i")
 console.log(hiringRegExp)
 
@@ -78,6 +79,13 @@ export class LinkedinPost {
        * @example href="/feed/update/urn:li:activity:7310359844241186816/"
        */
     }
+  }
+
+  private getPostContents() {
+    /** Parse email and phone from post body and add it to contents as well
+     * @example {url: "test@mail.com", type: "email"}
+     * @example {url: "999999", type: "phone"}
+     */
   }
 
   getHeaderText() {

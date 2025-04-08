@@ -31,10 +31,12 @@ const refineKeywords = (keywords: (string | RegExp)[]) =>
 export const extensionConfig = {
   keywordProfiles: {
     en: refineKeywords([
-      /(?!(you|they))( is|( are|'re)) hiring/,
-      /(?!(you|they))( is|( are|'re)) looking for/,
-      /(?!(you|they))( is|( are|'re)) seeking/,
-      /apply (now|here)/,
+      /(?!(you|they))( is|( are| am|'re)) hiring/,
+      /(?!(you|they))( is|( are| am|'re)) looking for/,
+      /(?!(you|they))( is|( are| am|'re)) seeking/,
+      /(apply|application) (now|here)/,
+      "help build",
+      "open role",
       /join (us|now)/,
     ]),
   },
