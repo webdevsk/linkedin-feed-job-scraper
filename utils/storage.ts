@@ -1,14 +1,28 @@
 import { z } from "zod"
+
+// example post url https://www.linkedin.com/feed/update/urn:li:activity:11111111111111/
 export const jobPostSchema = z.object({
   postId: z.string(),
   postBody: z.string(),
   postContents: z.array(
-    z.object({
-      url: z.string().url(),
-      type: z.string(),
-    })
+    z.union([
+      z.object({
+        url: z.string().url(),
+        type: z.enum(["image", "job", "article", "unknown"]),
+      }),
+      z.object({
+        thumbnailUrl: z.string().url(),
+        type: z.literal("video"),
+      }),
+    ])
   ),
-  postAuthor: z.string(),
+  postAuthor: z
+    .object({
+      name: z.string().optional(),
+      url: z.string().url().optional(),
+      profilePictureUrl: z.string().url().optional(),
+    })
+    .optional(),
   postedAt: z.string().datetime(),
   firstScrapedAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
