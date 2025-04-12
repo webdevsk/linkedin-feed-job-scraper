@@ -5,6 +5,7 @@ import type { ContentScriptContext } from "wxt/client"
 const feedUrlWatchPattern = new MatchPattern("*://*.linkedin.com/feed/*")
 const postSelector = "[data-view-tracking-scope]"
 const postParentSelector = "[data-finite-scroll-hotkey-context='FEED']"
+const { postJobs } = getJobPostService()
 
 export default defineContentScript({
   matches: ["*://*.linkedin.com/*"],
@@ -68,12 +69,23 @@ function handleScraping(element: Element) {
 
   try {
     const isHiringPost = post.checkIfHiringPost()
-    if (isHiringPost) {
-      post.element.insertAdjacentHTML(
-        "beforeend",
-        "<div style='color: red; font-weight: bold; font-size: 1.5rem; position: absolute; top: 0; right: 0; padding: 3.5rem 1rem; display: block; pointer-events: none;'>Hiring</div>"
-      )
+    if (!isHiringPost) return
+
+    post.element.insertAdjacentHTML(
+      "beforeend",
+      "<div style='color: red; font-weight: bold; font-size: 1.5rem; position: absolute; top: 0; right: 0; padding: 3.5rem 1rem; display: block; pointer-events: none;'>Hiring</div>"
+    )
+    const data: Parameters<typeof postJobs>[0][0] = {
+      postId: post.getPostId(),
+      postBody: post.getPostBody(),
+      postAuthor: {
+        name: post.getPostAuthorName(),
+        url: post.getPostAuthorUrl(),
+      },
+      postContents: [],
+      postedAt: post.getPostPostedAt(),
     }
+    customLog(data)
   } catch (error) {
     customError(error, post.element)
   }

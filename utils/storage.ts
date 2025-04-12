@@ -18,11 +18,10 @@ export const jobPostSchema = z.object({
   ),
   postAuthor: z
     .object({
-      name: z.string().optional(),
-      url: z.string().url().optional(),
-      profilePictureUrl: z.string().url().optional(),
+      name: z.string().nullable(),
+      url: z.string().url().nullable(),
     })
-    .optional(),
+    .nullable(),
   postedAt: z.string().datetime(),
   firstScrapedAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
@@ -45,10 +44,10 @@ const refineKeywords = (keywords: (string | RegExp)[]) =>
 export const extensionConfig = {
   keywordProfiles: {
     en: refineKeywords([
-      /(?!(you|they))( is|( are| am|'re)) hiring/,
-      /(?!(you|they))( is|( are| am|'re)) looking for/,
-      /(?!(you|they))( is|( are| am|'re)) seeking/,
-      /(apply|application) (now|here)/,
+      /(?!(you|they))( is|( are| am|\Sre)) hiring/, // \S is to match any non-whitespace character like '|"|`|’
+      /(?!(you|they))( is|( are| am|\Sre)) looking for/,
+      /(?!(you|they))( is|( are| am|\Sre)) seeking/,
+      /(apply|application) (now|here|today)/,
       "help build",
       "open role",
       /join (us|now)/,

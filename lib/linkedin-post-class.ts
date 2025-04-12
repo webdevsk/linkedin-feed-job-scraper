@@ -2,7 +2,7 @@ import { customLog } from "@/utils/customLog"
 import { extensionConfig } from "@/utils/storage"
 
 const seeMoreButtonSelector = 'button[aria-label^="see more"]'
-let postBodyNotFoundCounter = 0
+let postBodyNotFoundCounter: number = 0
 const postBodyNotFoundLimit = 5
 
 /** class ending with */
@@ -13,9 +13,7 @@ type ContentType = (typeof contentTypeEnums)[number]
 
 // Will feature profile enable|disable system later
 const keywords: string[] = Object.values(extensionConfig.keywordProfiles).flat()
-console.log(keywords)
 export const hiringRegExp = new RegExp(keywords.join("|"), "i")
-console.log(hiringRegExp)
 
 /**
  * Class to represent a LinkedIn post
@@ -26,6 +24,9 @@ console.log(hiringRegExp)
 export class LinkedinPost {
   element: Element
   isReshared: boolean = false
+
+  //Implement and test later
+  // cacheMap = new Map<unknown, unknown>()
 
   constructor(
     node: Element,
@@ -41,11 +42,11 @@ export class LinkedinPost {
     this.element = node
   }
 
-  private fetchSeeMoreButton() {
+  private fetchSeeMoreButton(): HTMLButtonElement | null {
     return this.element.querySelector<HTMLButtonElement>(seeMoreButtonSelector)
   }
 
-  private fetchPostBody() {
+  private fetchPostBody(): HTMLDivElement | null {
     const postBody = this.element.querySelector<HTMLDivElement>(".feed-shared-update-v2__description")
     if (!postBody) {
       postBodyNotFoundCounter++
@@ -60,25 +61,49 @@ export class LinkedinPost {
   }
 
   /** Attachments like images, videos, article or entity */
-  private fetchPostContent() {
+  private fetchPostContent(): HTMLDivElement | null {
     return this.element.querySelector<HTMLDivElement>(
       this.isReshared ? "update-components-mini-update-v2__reshared-content" : ".feed-shared-update-v2__content"
     )
   }
 
-  private getPostId() {
+  /**
+   * @warning This may not actually return the ID of the original linkedin post. If your connections "like" "love" or interact with such posts and they show up in your feed, this will return the ID of your connection's post which shares the original post
+   * @warning I haven't found a way to get the original post ID yet as its missing from the Element Body.
+   */
+  getPostId(): string | null {
+    const idRegexp = /urn:li:activity:(\d+)/
     if (!this.isReshared) {
-      /**
-       * can be parsed from the data-id attribute from the root element
-       * @example data-id="urn:li:activity:7310726920638251009"
-       */
+      return this.element.closest("[data-id]")?.getAttribute("data-id")?.match(idRegexp)?.at(1) ?? null
     } else {
-      /**
-       * can be parsed from the href of an anchor tag with the following class
-       * @class update-components-mini-update-v2__link-to-details-page
-       * @example href="/feed/update/urn:li:activity:7310359844241186816/"
-       */
+      return (
+        this.element
+          .querySelector<HTMLAnchorElement>(".update-components-mini-update-v2__link-to-details-page")
+          ?.getAttribute("href")
+          ?.match(idRegexp)
+          ?.at(1) ?? null
+      )
     }
+  }
+
+  getPostBody(): string | null {
+    const postBody = this.fetchPostBody()
+    return postBody?.innerText ?? null
+  }
+
+  getPostAuthorName(): string | null {
+    return (
+      this.element.querySelector<HTMLDivElement>(".update-components-actor__title .visually-hidden")?.innerText ??
+      this.element.querySelector<HTMLDivElement>(".update-components-actor__title")?.innerText ??
+      null
+    )
+  }
+
+  getPostAuthorUrl(): string | null {
+    const authorInfo = this.element.querySelector<HTMLAnchorElement>(".update-components-actor__meta-link")
+    return !authorInfo?.getAttribute("href")
+      ? null
+      : (new URL(authorInfo.getAttribute("href")!).pathname.match(/(.+)(\/posts)?/)?.at(1) ?? null)
   }
 
   private getPostContents() {
@@ -88,11 +113,11 @@ export class LinkedinPost {
      */
   }
 
-  getHeaderText() {
-    return this.element.querySelector<HTMLDivElement>(".update-components-header")?.innerText
+  getHeaderText(): string | null {
+    return this.element.querySelector<HTMLDivElement>(".update-components-header")?.innerText ?? null
   }
 
-  fetchSharedPost() {
+  fetchSharedPost(): HTMLDivElement | null {
     return this.element.querySelector<HTMLDivElement>(".feed-shared-update-v2__content-wrapper")
   }
 
@@ -105,6 +130,31 @@ export class LinkedinPost {
       }
     }
     return null
+  }
+
+  /**
+   * @warning This may not actually return the date of the original linkedin post. If your connections "like" "love" or interact with such posts and they show up in your feed, this will return the date of your connection's post which shares the original post. Thus the posted date on Linkedin and the posted date here may not be the same.
+   * @warning I haven't found a way to get the original post date yet as the original post ID is missing from the Element Body.
+   * @warning Parsing date from the on screen text is not reliable as the date format may change based on the user's timezone and language settings.
+   */
+  getPostPostedAt(): string | null {
+    const postId = this.getPostId()
+    if (!postId) return null
+
+    // Source: https://trevorfox.com/linkedin-post-date-extractor (Thanks Trevor Fox)
+
+    // Convert the post ID to a BigInt
+    const postIdBigInt = BigInt(postId)
+
+    // Convert to binary and get the first 41 bits
+    // We shift right by 22 bits to get only the first 41 bits that represent the timestamp
+    const timestampBits = postIdBigInt >> 22n
+
+    // Convert the binary timestamp back to decimal (milliseconds since epoch)
+    const timestampMs = Number(timestampBits)
+
+    // Create a Date object from the timestamp
+    return new Date(timestampMs).toISOString()
   }
 
   checkIfHiringPost(): boolean {

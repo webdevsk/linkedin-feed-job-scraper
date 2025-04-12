@@ -17,6 +17,7 @@ type ErrorResponse = {
 }
 
 type ApiResponse<T> = Promise<SuccessResponse<T> | ErrorResponse>
+type Nullable<T> = { [K in keyof T]: T[K] | null }
 
 /**
  * Proxy to be called from the Service Worker AKA Background script
@@ -50,7 +51,7 @@ class JobPostService {
     }
   }
 
-  async postJobs(jobPosts: Omit<JobPost, "updatedAt" | "firstScrapedAt">[]): ApiResponse<JobPost[]> {
+  async postJobs(jobPosts: Nullable<Omit<JobPost, "updatedAt" | "firstScrapedAt">>[]): ApiResponse<JobPost[]> {
     if (!jobPosts.length) {
       return { status: STATUS.SUCCESS, data: [] }
     }
@@ -63,9 +64,9 @@ class JobPostService {
         const newJobPost = jobPostSchema.parse({
           ...jobPost,
           updatedAt: timeStamp,
-          firstScrapedAt: storage.get(jobPost.postId)?.firstScrapedAt ?? timeStamp,
+          firstScrapedAt: !jobPost.postId ? timeStamp : (storage.get(jobPost.postId)?.firstScrapedAt ?? timeStamp),
         })
-        storage.set(jobPost.postId, newJobPost)
+        storage.set(newJobPost.postId, newJobPost)
         data.push(newJobPost)
       }
 
