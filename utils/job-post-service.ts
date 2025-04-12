@@ -19,6 +19,11 @@ type ErrorResponse = {
 type ApiResponse<T> = Promise<SuccessResponse<T> | ErrorResponse>
 type Nullable<T> = { [K in keyof T]: T[K] | null }
 
+/** Minimally accepted params to send to the api. Validation is done in the Server AKA Service worker */
+export type AcceptableJobPostParamsForSubmission = Nullable<Omit<JobPost, "updatedAt" | "firstScrapedAt">> & {
+  postContents: JobPost["postContents"]
+}
+
 /**
  * Proxy to be called from the Service Worker AKA Background script
  */

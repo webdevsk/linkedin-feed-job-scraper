@@ -1,11 +1,10 @@
-import { LinkedinPost } from "@/lib/linkedin-post-class"
+import { LinkedinPost, postParentSelector, postSelector } from "@/lib/linkedin-post-class"
 import { customError, customLog } from "@/utils/customLog"
+import { AcceptableJobPostParamsForSubmission } from "@/utils/job-post-service"
+import { PostContentTypes } from "@/utils/storage"
 import type { ContentScriptContext } from "wxt/client"
 
 const feedUrlWatchPattern = new MatchPattern("*://*.linkedin.com/feed/*")
-const postSelector = "[data-view-tracking-scope]"
-const postParentSelector = "[data-finite-scroll-hotkey-context='FEED']"
-const { postJobs } = getJobPostService()
 
 export default defineContentScript({
   matches: ["*://*.linkedin.com/*"],
@@ -59,10 +58,6 @@ function mainWatch(ctx: ContentScriptContext) {
   })
 }
 
-function isElement(node: Node): node is Element {
-  return node.nodeType === Node.ELEMENT_NODE
-}
-
 function handleScraping(element: Element) {
   // whatever we wanna do with each post
   const post = new LinkedinPost(element)
@@ -75,18 +70,59 @@ function handleScraping(element: Element) {
       "beforeend",
       "<div style='color: red; font-weight: bold; font-size: 1.5rem; position: absolute; top: 0; right: 0; padding: 3.5rem 1rem; display: block; pointer-events: none;'>Hiring</div>"
     )
-    const data: Parameters<typeof postJobs>[0][0] = {
+
+    const data: AcceptableJobPostParamsForSubmission = {
       postId: post.getPostId(),
       postBody: post.getPostBody(),
       postAuthor: {
         name: post.getPostAuthorName(),
         url: post.getPostAuthorUrl(),
       },
-      postContents: [],
+      postContents: generatePostContents(post),
       postedAt: post.getPostPostedAt(),
     }
-    customLog(data)
+    customLog(data.postContents, post.getPostContentType())
   } catch (error) {
     customError(error, post.element)
+  }
+}
+
+function isElement(node: Node): node is Element {
+  return node.nodeType === Node.ELEMENT_NODE
+}
+
+function generatePostContents(post: LinkedinPost): AcceptableJobPostParamsForSubmission["postContents"] {
+  const type = post.getPostContentType()
+  if (!type) return []
+
+  // These are slides/documents rendered through a cross origin iframe. Thus we can't get the contents
+  if (type === "document__container") return []
+
+  const makePostContentBody = (url: string) => ({
+    [type === "linkedin-video" ? "thumbnailUrl" : "url"]: url,
+    type: (
+      {
+        "linkedin-video": "video",
+        entity: "job",
+        article: "article",
+        image: "image",
+      } as const
+    )[type],
+  })
+
+  switch (type) {
+    case "image":
+      return post.getPostImageLinks().map(makePostContentBody)
+    case "entity":
+      return post.getPostEntityLinks().map(makePostContentBody)
+    case "article":
+      return post.getPostArticleLinks().map(makePostContentBody)
+    case "linkedin-video": {
+      const link = post.getPostVideoThumbLink()
+      if (!link) return []
+      return [makePostContentBody(link)]
+    }
+    default:
+      return []
   }
 }

@@ -1,20 +1,16 @@
 import { z } from "zod"
 
 // example post url https://www.linkedin.com/feed/update/urn:li:activity:11111111111111/
+export const PostContentTypes = ["image", "job", "article", "video"] as const
 export const jobPostSchema = z.object({
   postId: z.string(),
   postBody: z.string(),
   postContents: z.array(
-    z.union([
-      z.object({
-        url: z.string().url(),
-        type: z.enum(["image", "job", "article", "unknown"]),
-      }),
-      z.object({
-        thumbnailUrl: z.string().url(),
-        type: z.literal("video"),
-      }),
-    ])
+    z.object({
+      url: z.string().url().optional(),
+      thumbnailUrl: z.string().url().optional(),
+      type: z.enum(PostContentTypes),
+    })
   ),
   postAuthor: z
     .object({
@@ -44,9 +40,10 @@ const refineKeywords = (keywords: (string | RegExp)[]) =>
 export const extensionConfig = {
   keywordProfiles: {
     en: refineKeywords([
-      /(?!(you|they))( is|( are| am|\Sre)) hiring/, // \S is to match any non-whitespace character like '|"|`|’
+      /(?!(you|they))( is|( are| am|\Sre)) (#)?hiring/, // \S is to match any non-whitespace character like '|"|`|’
       /(?!(you|they))( is|( are| am|\Sre)) looking for/,
       /(?!(you|they))( is|( are| am|\Sre)) seeking/,
+      "we seek",
       /(apply|application) (now|here|today)/,
       "help build",
       "open role",

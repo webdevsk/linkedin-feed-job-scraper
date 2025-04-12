@@ -1,12 +1,14 @@
 import { customLog } from "@/utils/customLog"
 import { extensionConfig } from "@/utils/storage"
 
+export const postSelector = "[data-view-tracking-scope]"
+export const postParentSelector = "[data-finite-scroll-hotkey-context='FEED']"
 const seeMoreButtonSelector = 'button[aria-label^="see more"]'
 let postBodyNotFoundCounter: number = 0
 const postBodyNotFoundLimit = 5
 
 /** class ending with */
-const contentTypeEnums = ["image", "linkedin-video", "article", "entity"] as const
+const contentTypeEnums = ["image", "linkedin-video", "article", "entity", "document__container"] as const
 type ContentType = (typeof contentTypeEnums)[number]
 
 //Urgent hiring for HR recruiter and team lead
@@ -61,10 +63,14 @@ export class LinkedinPost {
   }
 
   /** Attachments like images, videos, article or entity */
-  private fetchPostContent(): HTMLDivElement | null {
+  private fetchPostContentRootNode(): HTMLDivElement | null {
     return this.element.querySelector<HTMLDivElement>(
       this.isReshared ? "update-components-mini-update-v2__reshared-content" : ".feed-shared-update-v2__content"
     )
+  }
+
+  private fetchPostContents(): Element[] {
+    return this.fetchPostContentRootNode()?.children[Symbol.iterator]().toArray() ?? []
   }
 
   /**
@@ -122,7 +128,7 @@ export class LinkedinPost {
   }
 
   getPostContentType(): ContentType | null {
-    const postContent = this.fetchPostContent()
+    const postContent = this.fetchPostContentRootNode()
     if (!postContent) return null
     for (const contentType of contentTypeEnums) {
       if (postContent.matches(`.update-components-${contentType}`)) {
@@ -130,6 +136,40 @@ export class LinkedinPost {
       }
     }
     return null
+  }
+
+  getPostArticleLinks(): string[] {
+    // considered: website links
+    return (
+      this.fetchPostContents()
+        .map<string | null>((elm) => elm.querySelector<HTMLAnchorElement>("a")?.href ?? null)
+        .filter<string>((href): href is string => Boolean(href)) ?? []
+    )
+  }
+
+  getPostEntityLinks(): string[] {
+    return (
+      this.fetchPostContents()
+        .map<string | null>((elm) => elm.querySelector<HTMLAnchorElement>("a")?.href ?? null)
+        .filter<string>((href): href is string => Boolean(href))
+        .map<string>((href) => {
+          // remove ref and other stuff
+          const url = new URL(href)
+          return url.origin + url.pathname
+        }) ?? []
+    )
+  }
+
+  getPostImageLinks(): string[] {
+    return (
+      this.fetchPostContents()
+        .map<string | null>((elm) => elm.querySelector<HTMLImageElement>("img")?.src ?? null)
+        .filter<string>((src): src is string => Boolean(src)) ?? []
+    )
+  }
+
+  getPostVideoThumbLink(): string | null {
+    return this.fetchPostContentRootNode()?.querySelector<HTMLVideoElement>("video")?.poster ?? null
   }
 
   /**
