@@ -3,7 +3,7 @@ import { extensionConfig } from "@/utils/storage"
 
 export const postSelector = "[data-view-tracking-scope]"
 export const postParentSelector = "[data-finite-scroll-hotkey-context='FEED']"
-const seeMoreButtonSelector = 'button[aria-label^="see more"]'
+const seeMoreButtonSelector = "button[aria-label^='see more']"
 let postBodyNotFoundCounter: number = 0
 const postBodyNotFoundLimit = 5
 
@@ -23,25 +23,45 @@ export const hiringRegExp = new RegExp(keywords.join("|"), "i")
  * @param options - Options for the post
  */
 
+type ConstructorOptions = {
+  /**
+   * This post is reshared in another linkedin post
+   * @default false
+   */
+  isReshared?: boolean
+}
+
 export class LinkedinPost {
   element: Element
   isReshared: boolean = false
+  private cacheMap = new Map<string, unknown>()
 
-  //Implement and test later
-  // cacheMap = new Map<unknown, unknown>()
-
-  constructor(
-    node: Element,
-    options?: {
-      /**
-       * This post is reshared in another linkedin post
-       * @default false
-       */
-      isReshared?: boolean
-    }
-  ) {
+  constructor(node: Element, options?: ConstructorOptions) {
     Object.assign(this, options)
     this.element = node
+    // Create proxy to automatically memoize private methods
+    return new Proxy(this, {
+      get(target: LinkedinPost, prop: string | symbol) {
+        const value = Reflect.get(target, prop)
+
+        // Only memoize private methods (methods that start with 'fetch')
+        if (typeof value === "function" && typeof prop === "string" && prop.startsWith("fetch")) {
+          return function (...args: unknown[]) {
+            const cacheKey = `${String(prop)}_${!args ? "" : JSON.stringify(args)}`
+            if (!target.cacheMap.has(cacheKey)) {
+              target.cacheMap.set(cacheKey, value.apply(target, args))
+            }
+            return target.cacheMap.get(cacheKey)
+          }
+        }
+        return value
+      },
+    })
+  }
+
+  // Clear cache method to be used when needed
+  private clearCache(): void {
+    this.cacheMap.clear()
   }
 
   private fetchSeeMoreButton(): HTMLButtonElement | null {
@@ -53,7 +73,6 @@ export class LinkedinPost {
     if (!postBody) {
       postBodyNotFoundCounter++
       customLog("Could not find post body", this.element)
-      // determine if the selector is outdated
       if (postBodyNotFoundCounter > postBodyNotFoundLimit)
         throw new Error(`Could not find post body for more than ${postBodyNotFoundLimit} times in a row`)
       return null
@@ -200,6 +219,14 @@ export class LinkedinPost {
   checkIfHiringPost(): boolean {
     const postBody = this.fetchPostBody()
     return !!postBody?.textContent && hiringRegExp.test(postBody.textContent)
+  }
+
+  /**
+   * Cleanup code.
+   * Remove any event listeners here.
+   */
+  dispose(): void {
+    this.clearCache()
   }
 
   // Not needed for now

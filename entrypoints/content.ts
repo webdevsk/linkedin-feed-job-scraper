@@ -60,7 +60,7 @@ function mainWatch(ctx: ContentScriptContext) {
 
 function handleScraping(element: Element) {
   // whatever we wanna do with each post
-  const post = new LinkedinPost(element)
+  let post: LinkedinPost | null = new LinkedinPost(element)
 
   try {
     const isHiringPost = post.checkIfHiringPost()
@@ -84,6 +84,10 @@ function handleScraping(element: Element) {
     customLog(data.postContents, post.getPostContentType())
   } catch (error) {
     customError(error, post.element)
+  } finally {
+    // Memory cleanup
+    post.dispose()
+    post = null
   }
 }
 
