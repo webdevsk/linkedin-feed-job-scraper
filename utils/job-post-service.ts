@@ -36,7 +36,7 @@ class JobPostService {
       const data: JobPost[] = []
       const storage = await jobPostsStorage.getValue()
       for (const postId of postIds) {
-        const jobPost = storage.get(postId)
+        const jobPost = storage[postId]
         if (jobPost) data.push(jobPost)
       }
       return { status: STATUS.SUCCESS, data }
@@ -49,7 +49,7 @@ class JobPostService {
   async listJobs(): ApiResponse<JobPost[]> {
     try {
       const storage = await jobPostsStorage.getValue()
-      return { status: STATUS.SUCCESS, data: Array.from(storage.values()) }
+      return { status: STATUS.SUCCESS, data: Object.values(storage) }
     } catch (error) {
       console.error(error)
       return { status: STATUS.ERROR, error: "Failed to list job posts" }
@@ -69,12 +69,11 @@ class JobPostService {
         const newJobPost = jobPostSchema.parse({
           ...jobPost,
           updatedAt: timeStamp,
-          firstScrapedAt: !jobPost.postId ? timeStamp : (storage.get(jobPost.postId)?.firstScrapedAt ?? timeStamp),
+          firstScrapedAt: !jobPost.postId ? timeStamp : (storage[jobPost.postId]?.firstScrapedAt ?? timeStamp),
         })
-        storage.set(newJobPost.postId, newJobPost)
+        storage[newJobPost.postId] = newJobPost
         data.push(newJobPost)
       }
-      console.log("before sending", storage)
       await jobPostsStorage.setValue(storage)
       return { status: STATUS.SUCCESS, data }
     } catch (error) {
@@ -90,7 +89,7 @@ class JobPostService {
     try {
       const storage = await jobPostsStorage.getValue()
       for (const postId of postIds) {
-        storage.delete(postId)
+        delete storage[postId]
       }
       await jobPostsStorage.setValue(storage)
       return { status: STATUS.SUCCESS, data: undefined }
@@ -102,9 +101,7 @@ class JobPostService {
 
   async deleteAllJobs(): ApiResponse<undefined> {
     try {
-      const storage = await jobPostsStorage.getValue()
-      storage.clear()
-      await jobPostsStorage.setValue(storage)
+      await jobPostsStorage.setValue({})
       return { status: STATUS.SUCCESS, data: undefined }
     } catch (error) {
       console.error(error)

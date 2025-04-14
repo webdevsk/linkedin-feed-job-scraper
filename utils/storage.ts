@@ -25,8 +25,8 @@ export const jobPostSchema = z.object({
 
 export type JobPost = z.infer<typeof jobPostSchema>
 
-export const jobPostsStorage = storage.defineItem<Map<JobPost["postId"], JobPost>>("local:jobPosts", {
-  fallback: new Map(),
+export const jobPostsStorage = storage.defineItem<Record<JobPost["postId"], JobPost>>("local:jobPosts", {
+  fallback: {},
   version: 1,
 })
 

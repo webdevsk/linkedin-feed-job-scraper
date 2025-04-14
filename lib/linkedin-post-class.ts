@@ -131,7 +131,7 @@ export class LinkedinPost {
     const authorInfo = this.element.querySelector<HTMLAnchorElement>(".update-components-actor__meta-link")
     return !authorInfo?.getAttribute("href")
       ? null
-      : (new URL(authorInfo.getAttribute("href")!).pathname.match(/(.+)(\/posts)?/)?.at(1) ?? null)
+      : (new URL(authorInfo.getAttribute("href")!).pathname.split("/").splice(0, 3).join("/").at(1) ?? null)
   }
 
   private getPostContents() {
