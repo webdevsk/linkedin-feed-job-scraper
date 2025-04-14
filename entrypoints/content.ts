@@ -1,15 +1,15 @@
 import { LinkedinPost, postParentSelector, postSelector } from "@/lib/linkedin-post-class"
-import { customError, customLog } from "@/utils/customLog"
 import { AcceptableJobPostParamsForSubmission } from "@/utils/job-post-service"
-import { PostContentTypes } from "@/utils/storage"
 import type { ContentScriptContext } from "wxt/client"
-
+import { injectConsole } from "@/utils/injectConsole"
+injectConsole()
 const feedUrlWatchPattern = new MatchPattern("*://*.linkedin.com/feed/*")
+const jobPostService = getJobPostService()
 
 export default defineContentScript({
   matches: ["*://*.linkedin.com/*"],
   main(ctx) {
-    customLog("Injecting content script")
+    console.log("Injecting content script")
 
     // Run if initially on feed page
     if (feedUrlWatchPattern.includes(window.location.href)) mainWatch(ctx)
@@ -22,15 +22,17 @@ export default defineContentScript({
 })
 
 // Main function to run when we are in the feed page
-function mainWatch(ctx: ContentScriptContext) {
+async function mainWatch(ctx: ContentScriptContext) {
   // fetching initial posts
   for (const element of document.querySelectorAll(postSelector)) {
     handleScraping(element)
+    const sharedPost = element.querySelector<HTMLDivElement>(".feed-shared-update-v2__content-wrapper")
+    if (sharedPost) handleScraping(sharedPost, true)
   }
 
   const rootToObserve = document.querySelector(postParentSelector) ?? document.body
   if (!rootToObserve) {
-    customError("Could not find root to observe")
+    console.error("Could not find root to observe")
     return
   }
 
@@ -41,6 +43,8 @@ function mainWatch(ctx: ContentScriptContext) {
       for (const node of mutation.addedNodes) {
         if (isElement(node) && node.matches(postSelector)) {
           handleScraping(node)
+          const sharedPost = node.querySelector<HTMLDivElement>(".feed-shared-update-v2__content-wrapper")
+          if (sharedPost) handleScraping(sharedPost, true)
         }
       }
     }
@@ -53,14 +57,21 @@ function mainWatch(ctx: ContentScriptContext) {
     subtree: true,
   })
   ctx.onInvalidated(() => {
-    customError("Content script context invalidated. Shutting down...")
+    console.error("Content script context invalidated. Shutting down...")
     observer.disconnect()
   })
 }
 
-function handleScraping(element: Element) {
+async function handleScraping(element: Element, isReshared: boolean = false) {
   // whatever we wanna do with each post
-  let post: LinkedinPost | null = new LinkedinPost(element)
+  let post: LinkedinPost | null = new LinkedinPost(element, { isReshared })
+
+  // Recurse when a reshared post is found
+  // This throws for some reason when any imported modules like jobPostService is called within
+  // if (!isReshared) {
+  //   const sharedPost = post.fetchSharedPost()
+  //   if (sharedPost) handleScraping(sharedPost, true)
+  // }
 
   try {
     const isHiringPost = post.checkIfHiringPost()
@@ -81,9 +92,12 @@ function handleScraping(element: Element) {
       postContents: generatePostContents(post),
       postedAt: post.getPostPostedAt(),
     }
-    customLog(data.postContents, post.getPostContentType())
+    console.table(data)
+    const res = await jobPostService.postJobs([data])
+    console.log(res)
+    if (res.status === "error") throw new Error(res.error)
   } catch (error) {
-    customError(error, post.element)
+    console.error(error)
   } finally {
     // Memory cleanup
     post.dispose()

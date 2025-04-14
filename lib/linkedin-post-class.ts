@@ -1,4 +1,3 @@
-import { customLog } from "@/utils/customLog"
 import { extensionConfig } from "@/utils/storage"
 
 export const postSelector = "[data-view-tracking-scope]"
@@ -72,7 +71,7 @@ export class LinkedinPost {
     const postBody = this.element.querySelector<HTMLDivElement>(".feed-shared-update-v2__description")
     if (!postBody) {
       postBodyNotFoundCounter++
-      customLog("Could not find post body", this.element)
+      console.log("Could not find post body", this.element)
       if (postBodyNotFoundCounter > postBodyNotFoundLimit)
         throw new Error(`Could not find post body for more than ${postBodyNotFoundLimit} times in a row`)
       return null
@@ -90,6 +89,10 @@ export class LinkedinPost {
 
   private fetchPostContents(): Element[] {
     return this.fetchPostContentRootNode()?.children[Symbol.iterator]().toArray() ?? []
+  }
+
+  fetchSharedPost(): HTMLDivElement | null {
+    return this.element.querySelector<HTMLDivElement>(".feed-shared-update-v2__content-wrapper")
   }
 
   /**
@@ -140,10 +143,6 @@ export class LinkedinPost {
 
   getHeaderText(): string | null {
     return this.element.querySelector<HTMLDivElement>(".update-components-header")?.innerText ?? null
-  }
-
-  fetchSharedPost(): HTMLDivElement | null {
-    return this.element.querySelector<HTMLDivElement>(".feed-shared-update-v2__content-wrapper")
   }
 
   getPostContentType(): ContentType | null {

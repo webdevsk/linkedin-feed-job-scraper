@@ -41,7 +41,7 @@ class JobPostService {
       }
       return { status: STATUS.SUCCESS, data }
     } catch (error) {
-      customError(error)
+      console.error(error)
       return { status: STATUS.ERROR, error: "Failed to get job posts" }
     }
   }
@@ -51,7 +51,7 @@ class JobPostService {
       const storage = await jobPostsStorage.getValue()
       return { status: STATUS.SUCCESS, data: Array.from(storage.values()) }
     } catch (error) {
-      customError(error)
+      console.error(error)
       return { status: STATUS.ERROR, error: "Failed to list job posts" }
     }
   }
@@ -74,11 +74,11 @@ class JobPostService {
         storage.set(newJobPost.postId, newJobPost)
         data.push(newJobPost)
       }
-
+      console.log("before sending", storage)
       await jobPostsStorage.setValue(storage)
       return { status: STATUS.SUCCESS, data }
     } catch (error) {
-      customError(error)
+      console.error(error)
       return { status: STATUS.ERROR, error: "Failed to post job posts" }
     }
   }
@@ -95,7 +95,7 @@ class JobPostService {
       await jobPostsStorage.setValue(storage)
       return { status: STATUS.SUCCESS, data: undefined }
     } catch (error) {
-      customError(error)
+      console.error(error)
       return { status: STATUS.ERROR, error: "Failed to delete job posts" }
     }
   }
@@ -107,7 +107,7 @@ class JobPostService {
       await jobPostsStorage.setValue(storage)
       return { status: STATUS.SUCCESS, data: undefined }
     } catch (error) {
-      customError(error)
+      console.error(error)
       return { status: STATUS.ERROR, error: "Failed to delete all job posts" }
     }
   }

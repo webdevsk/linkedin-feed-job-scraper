@@ -15,7 +15,7 @@ export const jobPostSchema = z.object({
   postAuthor: z
     .object({
       name: z.string().nullable(),
-      url: z.string().url().nullable(),
+      url: z.string().nullable(),
     })
     .nullable(),
   postedAt: z.string().datetime(),
