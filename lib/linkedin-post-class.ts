@@ -1,4 +1,4 @@
-import { extensionConfig } from "@/utils/storage"
+import { extensionConfig } from "@/utils/extension-config"
 
 export const baseUrl = "https://www.linkedin.com"
 export const postSelector = "[data-view-tracking-scope]"
