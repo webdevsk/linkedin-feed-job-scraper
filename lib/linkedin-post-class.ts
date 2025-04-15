@@ -1,16 +1,16 @@
 import { extensionConfig } from "@/utils/storage"
 
+export const baseUrl = "https://www.linkedin.com"
 export const postSelector = "[data-view-tracking-scope]"
 export const postParentSelector = "[data-finite-scroll-hotkey-context='FEED']"
-const seeMoreButtonSelector = "button[aria-label^='see more']"
+export const sharedPostSelector = ".feed-shared-update-v2__content-wrapper"
+// const seeMoreButtonSelector = "button[aria-label^='see more']"
 let postBodyNotFoundCounter: number = 0
 const postBodyNotFoundLimit = 5
 
 /** class ending with */
 const contentTypeEnums = ["image", "linkedin-video", "article", "entity", "document__container"] as const
 type ContentType = (typeof contentTypeEnums)[number]
-
-//Urgent hiring for HR recruiter and team lead
 
 // Will feature profile enable|disable system later
 const keywords: string[] = Object.values(extensionConfig.keywordProfiles).flat()
@@ -63,10 +63,6 @@ export class LinkedinPost {
     this.cacheMap.clear()
   }
 
-  private fetchSeeMoreButton(): HTMLButtonElement | null {
-    return this.element.querySelector<HTMLButtonElement>(seeMoreButtonSelector)
-  }
-
   private fetchPostBody(): HTMLDivElement | null {
     const postBody = this.element.querySelector<HTMLDivElement>(".feed-shared-update-v2__description")
     if (!postBody) {
@@ -89,10 +85,6 @@ export class LinkedinPost {
 
   private fetchPostContents(): Element[] {
     return this.fetchPostContentRootNode()?.children[Symbol.iterator]().toArray() ?? []
-  }
-
-  fetchSharedPost(): HTMLDivElement | null {
-    return this.element.querySelector<HTMLDivElement>(".feed-shared-update-v2__content-wrapper")
   }
 
   /**
@@ -128,21 +120,46 @@ export class LinkedinPost {
   }
 
   getPostAuthorUrl(): string | null {
-    const authorInfo = this.element.querySelector<HTMLAnchorElement>(".update-components-actor__meta-link")
-    return !authorInfo?.getAttribute("href")
-      ? null
-      : (new URL(authorInfo.getAttribute("href")!).pathname.split("/").splice(0, 3).join("/").at(1) ?? null)
+    const rawUrl = this.element
+      .querySelector<HTMLAnchorElement>(".update-components-actor__meta-link")
+      ?.getAttribute("href")
+    if (!rawUrl) return null
+    const { origin, pathname } = new URL(rawUrl)
+    return `${origin}${pathname.split("/").splice(0, 3).join("/")}`
   }
 
-  private getPostContents() {
-    /** Parse email and phone from post body and add it to contents as well
-     * @example {url: "test@mail.com", type: "email"}
-     * @example {url: "999999", type: "phone"}
-     */
-  }
+  getContactInfo(): { url: string; type: "email" | "phone" }[] {
+    type ThisFnReturnType = ReturnType<typeof this.getContactInfo>
+    const contactInfo: ThisFnReturnType = []
+    const postBody = this.fetchPostBody()
+    if (!postBody) return contactInfo
 
-  getHeaderText(): string | null {
-    return this.element.querySelector<HTMLDivElement>(".update-components-header")?.innerText ?? null
+    // Phone number regex - handles international formats
+    // Supports:
+    // - Optional country code with + prefix
+    // - Optional spaces, dots, dashes, or parentheses as separators
+    // - Various formats: (123) 456-7890, +1 123.456.7890, 123-456-7890, etc.
+    // - Minimum 7 digits (excluding formatting), maximum 15 digits total
+    const phoneRegex = /^(\+?\d{1,4}[-.\s]?)?(\(?\d{1,4}\)?[-.\s]?)?(\d{1,4}[-.\s]?\d{1,4}[-.\s]?\d{1,9})$/g
+
+    // Email regex - RFC 5322 compliant with practical limitations
+    // Supports:
+    // - Unicode characters in local part
+    // - Multiple dots in local part
+    // - IP literals and domain literals
+    // - Subdomains and various TLDs
+    // - Special characters in local part
+    // - Prevents consecutive dots and starting/ending with dots
+    const emailRegex =
+      /^(?=[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]{1,64}@)([a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+(?:\.[a-zA-Z0-9!#$%&'*+/=?^_`{|}~-]+)*)@(?=.{1,255}$)(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/g
+
+    const emails = postBody.innerText.match(emailRegex) ?? []
+    const phones = postBody.innerText.match(phoneRegex) ?? []
+
+    contactInfo.push(...emails.map<ThisFnReturnType[number]>((email) => ({ url: email, type: "email" })))
+    contactInfo.push(...phones.map<ThisFnReturnType[number]>((phone) => ({ url: phone, type: "phone" })))
+
+    return contactInfo
   }
 
   getPostContentType(): ContentType | null {
@@ -230,6 +247,14 @@ export class LinkedinPost {
 
   // Not needed for now
   //////////////////////
+
+  // getHeaderText(): string | null {
+  //   return this.element.querySelector<HTMLDivElement>(".update-components-header")?.innerText ?? null
+  // }
+
+  // private fetchSeeMoreButton(): HTMLButtonElement | null {
+  //   return this.element.querySelector<HTMLButtonElement>(seeMoreButtonSelector)
+  // }
 
   // isCollapsed() {
   //   return Boolean(this.fetchSeeMoreButton())

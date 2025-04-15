@@ -1,6 +1,7 @@
 import { defineProxyService } from "@webext-core/proxy-service"
 import type { JobPost } from "./storage"
 import { jobPostSchema, jobPostsStorage } from "./storage"
+import { z } from "zod"
 
 const STATUS = {
   SUCCESS: "success",
@@ -66,13 +67,20 @@ class JobPostService {
       const storage = await jobPostsStorage.getValue()
 
       for (const jobPost of jobPosts) {
-        const newJobPost = jobPostSchema.parse({
-          ...jobPost,
-          updatedAt: timeStamp,
-          firstScrapedAt: !jobPost.postId ? timeStamp : (storage[jobPost.postId]?.firstScrapedAt ?? timeStamp),
-        })
-        storage[newJobPost.postId] = newJobPost
-        data.push(newJobPost)
+        try {
+          const newJobPost = jobPostSchema.parse({
+            ...jobPost,
+            updatedAt: timeStamp,
+            firstScrapedAt: !jobPost.postId ? timeStamp : (storage[jobPost.postId]?.firstScrapedAt ?? timeStamp),
+          })
+          storage[newJobPost.postId] = newJobPost
+          data.push(newJobPost)
+        } catch (error) {
+          if (error instanceof z.ZodError) {
+            throw new Error(`${error.message} ${JSON.stringify(jobPost)}`)
+          }
+          throw error
+        }
       }
       await jobPostsStorage.setValue(storage)
       return { status: STATUS.SUCCESS, data }

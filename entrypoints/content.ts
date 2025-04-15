@@ -1,8 +1,9 @@
-import { LinkedinPost, postParentSelector, postSelector } from "@/lib/linkedin-post-class"
+import { baseUrl, LinkedinPost, postParentSelector, postSelector, sharedPostSelector } from "@/lib/linkedin-post-class"
 import { AcceptableJobPostParamsForSubmission } from "@/utils/job-post-service"
 import type { ContentScriptContext } from "wxt/client"
 import { injectConsole } from "@/utils/injectConsole"
 injectConsole()
+
 const feedUrlWatchPattern = new MatchPattern("*://*.linkedin.com/feed/*")
 const jobPostService = getJobPostService()
 
@@ -23,17 +24,17 @@ export default defineContentScript({
 
 // Main function to run when we are in the feed page
 async function mainWatch(ctx: ContentScriptContext) {
-  // fetching initial posts
-  for (const element of document.querySelectorAll(postSelector)) {
-    handleScraping(element)
-    const sharedPost = element.querySelector<HTMLDivElement>(".feed-shared-update-v2__content-wrapper")
-    if (sharedPost) handleScraping(sharedPost, true)
-  }
-
-  const rootToObserve = document.querySelector(postParentSelector) ?? document.body
+  const rootToObserve = document.querySelector(postParentSelector)
   if (!rootToObserve) {
     console.error("Could not find root to observe")
     return
+  }
+
+  // fetching initial posts
+  for (const element of rootToObserve.querySelectorAll(postSelector)) {
+    handleScraping(element)
+    const sharedPost = element.querySelector<HTMLDivElement>(sharedPostSelector)
+    if (sharedPost) handleScraping(sharedPost, true)
   }
 
   // fetching new posts dynamically
@@ -43,7 +44,7 @@ async function mainWatch(ctx: ContentScriptContext) {
       for (const node of mutation.addedNodes) {
         if (isElement(node) && node.matches(postSelector)) {
           handleScraping(node)
-          const sharedPost = node.querySelector<HTMLDivElement>(".feed-shared-update-v2__content-wrapper")
+          const sharedPost = node.querySelector<HTMLDivElement>(sharedPostSelector)
           if (sharedPost) handleScraping(sharedPost, true)
         }
       }
@@ -84,6 +85,7 @@ async function handleScraping(element: Element, isReshared: boolean = false) {
 
     const data: AcceptableJobPostParamsForSubmission = {
       postId: post.getPostId(),
+      postUrl: `${baseUrl}/feed/update/urn:li:activity:${post.getPostId()}`,
       postBody: post.getPostBody(),
       postAuthor: {
         name: post.getPostAuthorName(),
@@ -110,6 +112,10 @@ function isElement(node: Node): node is Element {
 }
 
 function generatePostContents(post: LinkedinPost): AcceptableJobPostParamsForSubmission["postContents"] {
+  type ThisFnReturnType = ReturnType<typeof generatePostContents>
+  const postContents: ThisFnReturnType = []
+  postContents.push(...post.getContactInfo())
+
   const type = post.getPostContentType()
   if (!type) return []
 
@@ -130,17 +136,22 @@ function generatePostContents(post: LinkedinPost): AcceptableJobPostParamsForSub
 
   switch (type) {
     case "image":
-      return post.getPostImageLinks().map(makePostContentBody)
+      postContents.push(...post.getPostImageLinks().map(makePostContentBody))
+      break
     case "entity":
-      return post.getPostEntityLinks().map(makePostContentBody)
+      postContents.push(...post.getPostEntityLinks().map(makePostContentBody))
+      break
     case "article":
-      return post.getPostArticleLinks().map(makePostContentBody)
+      postContents.push(...post.getPostArticleLinks().map(makePostContentBody))
+      break
     case "linkedin-video": {
       const link = post.getPostVideoThumbLink()
-      if (!link) return []
-      return [makePostContentBody(link)]
+      if (!link) break
+      postContents.push(makePostContentBody(link))
+      break
     }
     default:
-      return []
+      break
   }
+  return postContents
 }

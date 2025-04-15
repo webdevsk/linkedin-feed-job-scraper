@@ -1,9 +1,10 @@
 import { z } from "zod"
 
 // example post url https://www.linkedin.com/feed/update/urn:li:activity:11111111111111/
-export const PostContentTypes = ["image", "job", "article", "video"] as const
+export const PostContentTypes = ["image", "job", "article", "video", "email", "phone"] as const
 export const jobPostSchema = z.object({
   postId: z.string(),
+  postUrl: z.string().url(),
   postBody: z.string(),
   postContents: z.array(
     z.object({
@@ -15,7 +16,7 @@ export const jobPostSchema = z.object({
   postAuthor: z
     .object({
       name: z.string().nullable(),
-      url: z.string().nullable(),
+      url: z.string().url().nullable(),
     })
     .nullable(),
   postedAt: z.string().datetime(),
