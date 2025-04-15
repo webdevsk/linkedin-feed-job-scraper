@@ -20,6 +20,9 @@ type ErrorResponse = {
 type ApiResponse<T> = Promise<SuccessResponse<T> | ErrorResponse>
 type Nullable<T> = { [K in keyof T]: T[K] | null }
 
+/** Trigger to stop watching */
+type Unwatch = ReturnType<typeof jobPostsStorage.watch>
+
 /** Minimally accepted params to send to the api. Validation is done in the Server AKA Service worker */
 export type AcceptableJobPostParamsForSubmission = Nullable<Omit<JobPost, "updatedAt" | "firstScrapedAt">> & {
   postContents: JobPost["postContents"]
@@ -55,6 +58,19 @@ class JobPostService {
       console.error(error)
       return { status: STATUS.ERROR, error: "Failed to list job posts" }
     }
+  }
+
+  watchJobs(
+    callback: (
+      newValue: JobPost[],
+      oldValue: JobPost[],
+      newDataMap: Record<JobPost["postId"], JobPost>,
+      oldDataMap: Record<JobPost["postId"], JobPost>
+    ) => void
+  ): Unwatch {
+    return jobPostsStorage.watch((newValue, oldValue) => {
+      callback(Object.values(newValue), Object.values(oldValue), newValue, oldValue)
+    })
   }
 
   async postJobs(jobPosts: Nullable<Omit<JobPost, "updatedAt" | "firstScrapedAt">>[]): ApiResponse<JobPost[]> {
