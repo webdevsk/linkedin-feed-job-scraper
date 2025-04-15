@@ -31,9 +31,9 @@ export const jobPostsStorage = storage.defineItem<Record<JobPost["postId"], JobP
   version: 1,
 })
 
-export const activeTabId = storage.defineItem<number | null>("local:activeTabId")
+export const activeTabIdStorage = storage.defineItem<number | null>("local:activeTabId")
 
-export const isRunning = storage.defineItem<boolean>("local:isRunning", { fallback: false })
+export const isRunningStorage = storage.defineItem<boolean>("local:isRunning", { fallback: false })
 
 // fetch it from storage
 // periodically update it from a github repo
