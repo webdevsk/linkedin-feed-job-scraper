@@ -1,4 +1,4 @@
-import { defineProxyService } from "@webext-core/proxy-service"
+// import { defineProxyService } from "@webext-core/proxy-service"
 import type { JobPost } from "./storage"
 import { jobPostSchema, jobPostsStorage } from "./storage"
 import { z } from "zod"
@@ -118,7 +118,11 @@ class JobPostService {
   }
 }
 
-export const [registerJobPostService, getJobPostService] = defineProxyService(
-  "BookmarkServiceWithTags",
-  () => new JobPostService()
-)
+// If we want to run this code in service-worker
+// export const [registerJobPostService, getJobPostService] = defineProxyService(
+//   "BookmarkServiceWithTags",
+//   () => new JobPostService()
+// )
+
+// Run this code in caller's own environment
+export const getJobPostService = () => new JobPostService()
