@@ -2,6 +2,7 @@ import { postParentSelector, postSelector, sharedPostSelector } from "@/lib/link
 import type { ContentScriptContext } from "wxt/client"
 import { injectConsole } from "@/utils/inject-console"
 import { handleScraping } from "./handle-scraping"
+import { RemoveListenerCallback } from "@webext-core/messaging"
 injectConsole()
 
 const feedUrlWatchPattern = new MatchPattern("*://*.linkedin.com/feed/*")
@@ -11,29 +12,34 @@ export default defineContentScript({
   matches: ["*://*.linkedin.com/*"],
   main(ctx) {
     console.log("Injecting content script")
+    const messageListeners: RemoveListenerCallback[] = []
 
     onReadyForScripting(ctx, (/** Fires when scraping context is invalidated */ onInvalidated) => {
-      let disconnectObserver: MutationObserver["disconnect"] | null = null
+      let stopObserver: MutationObserver["disconnect"] | null = null
       console.log("Ready for script")
       sendMessage("triggerReadyState", true)
 
-      onMessage("triggerStart", () => {
-        disconnectObserver = startObserver()
+      const m1 = onMessage("triggerStart", () => {
+        stopObserver = startObserver()
         isRunningStorage.setValue(true)
-        console.log(disconnectObserver, "onStart")
+        console.log(stopObserver, "onStart")
       })
 
-      onMessage("triggerStop", () => {
-        disconnectObserver?.()
+      const m2 = onMessage("triggerStop", () => {
+        stopObserver?.()
         isRunningStorage.setValue(false)
       })
+
+      // Add listeners here so that we can remove them at ease
+      messageListeners.push(m1, m2)
 
       onInvalidated(() => {
-        console.log(disconnectObserver, "invalidated")
+        console.log(stopObserver, "invalidated")
         console.log("Not ready")
         sendMessage("triggerReadyState", false)
-        disconnectObserver?.()
+        stopObserver?.()
         isRunningStorage.setValue(false)
+        messageListeners.forEach((cb) => cb())
       })
     })
   },

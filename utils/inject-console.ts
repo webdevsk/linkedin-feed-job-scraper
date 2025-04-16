@@ -1,5 +1,6 @@
-/** Styles console.log and console.error prefixing the extension name */
 const consoleMethodsThatDontBreakWhenArgumentIsString = ["log", "error", "warn", "info", "debug", "trace"]
+
+/** Styles console.log and console.error prefixing the extension name */
 export function injectConsole() {
   const originalConsole = globalThis.console
   globalThis.console = new Proxy(originalConsole, {
