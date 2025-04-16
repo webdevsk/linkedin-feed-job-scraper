@@ -1,7 +1,5 @@
 // import { defineProxyService } from "@webext-core/proxy-service"
-import type { JobPost } from "./storage"
-import { jobPostsStorage } from "./storage"
-import { jobPostSchema } from "./job-post-schema"
+
 import { z } from "zod"
 
 const STATUS = {

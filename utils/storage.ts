@@ -1,10 +1,11 @@
-import type { JobPost } from "./job-post-schema"
-
-export const jobPostsStorage = storage.defineItem<Record<JobPost["postId"], JobPost>>("local:jobPosts", {
+export type JobPostsStorageValue = Record<JobPost["postId"], JobPost>
+export const jobPostsStorage = storage.defineItem<JobPostsStorageValue>("local:jobPosts", {
   fallback: {},
   version: 1,
 })
 
-export const activeTabIdStorage = storage.defineItem<number | null>("local:activeTabId")
+export type ActiveTabIdStorageValue = number | null
+export const activeTabIdStorage = storage.defineItem<ActiveTabIdStorageValue>("local:activeTabId")
 
-export const isRunningStorage = storage.defineItem<boolean>("local:isRunning", { fallback: false })
+export type RunningTabIdStorageValue = number | null
+export const runningTabIdStorage = storage.defineItem<RunningTabIdStorageValue>("local:runningTabId")

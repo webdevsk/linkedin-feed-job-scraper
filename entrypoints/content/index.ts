@@ -56,7 +56,7 @@ function onReadyForScripting(ctx: ContentScriptContext, cb: (onInvalidated: OnIn
     ctx.onInvalidated(cb)
   }
 
-  const lookForSelector = (selector: string, cb: () => void) => {
+  const watchForSelector = (selector: string, cb: () => void) => {
     const observer = new MutationObserver((_, observer) => {
       if (document.querySelector(selector)) {
         observer.disconnect()
@@ -68,11 +68,11 @@ function onReadyForScripting(ctx: ContentScriptContext, cb: (onInvalidated: OnIn
   }
 
   // Run if initially on target page
-  if (feedUrlWatchPattern.includes(window.location.href)) lookForSelector(postParentSelector, () => cb(onInvalidated))
+  if (feedUrlWatchPattern.includes(window.location.href)) watchForSelector(postParentSelector, () => cb(onInvalidated))
 
   // Run when dynamically navigated to target page
   ctx.addEventListener(window, "wxt:locationchange", ({ newUrl }) => {
-    if (feedUrlWatchPattern.includes(newUrl)) lookForSelector(postParentSelector, () => cb(onInvalidated))
+    if (feedUrlWatchPattern.includes(newUrl)) watchForSelector(postParentSelector, () => cb(onInvalidated))
   })
 }
 
