@@ -41,9 +41,9 @@ export type WatchForSelectorOptions = {
 type AbortWatcher = typeof MutationObserver.prototype.disconnect
 
 /** Cleanup function */
-export type InvalidatorFunction = () => void
+export type OnInvalidatedCallbackFn = () => void | Promise<void>
 
-export type WatchForSelectorCallback = () => (InvalidatorFunction | void)
+export type WatchForSelectorCallback = () => OnInvalidatedCallbackFn | void
 
 /**
  * Watches for given selectors. Fires callback once all of them are found.
@@ -74,7 +74,7 @@ export function watchForSelectors(
   if ("resolver" in options && typeof options.resolver !== "function")
     throw new Error("watchForSelectors: Resolver must be a function that resolves to boolean")
 
-  let onInvalidated: InvalidatorFunction | undefined
+  let onInvalidated: OnInvalidatedCallbackFn | undefined
   // Main logic
   const elements = selectors.map((selector) => document.querySelector<Element>(selector))
   if (options.resolver?.(elements) ?? elements.every((elm) => elm !== null)) {

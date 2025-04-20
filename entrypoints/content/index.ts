@@ -2,7 +2,6 @@ import { postParentSelector, postSelector, sharedPostSelector } from "@/lib/link
 import type { ContentScriptContext } from "wxt/client"
 import { injectConsole } from "@/utils/inject-console"
 import { handleScraping } from "./handle-scraping"
-import { onMessageExt } from "@/utils/on-message-ext"
 import { WatchForSelectorCallback, watchForSelectors } from "@/utils/watch-for-selectors"
 injectConsole()
 
@@ -13,24 +12,27 @@ export default defineContentScript({
   matches: ["*://*.linkedin.com/*"],
   main(ctx) {
     console.log("Injecting content script")
-    const ctrl = new AbortController()
+    // initial state. Will change when all the requirements are met
+    sendMessage("triggerReadyState", false)
 
     onReadyForScripting(ctx, () => {
       const triggerCtrl = new AbortController()
       console.log("Ready for script")
       sendMessage("triggerReadyState", true)
 
-      onMessageExt(ctrl, "triggerStart", () => {
-        console.log("trigger started")
-        startObserver(triggerCtrl)
-        sendMessage("triggerRunningState", true)
-      })
+      const listeners = [
+        onMessage("triggerStart", () => {
+          console.log("trigger started")
+          // startObserver(triggerCtrl)
+          sendMessage("triggerRunningState", true)
+        }),
 
-      onMessageExt(ctrl, "triggerStop", () => {
-        triggerCtrl.abort()
-        console.log("trigger cancelled")
-        sendMessage("triggerRunningState", false)
-      })
+        onMessage("triggerStop", () => {
+          // triggerCtrl.abort()
+          console.log("trigger cancelled")
+          sendMessage("triggerRunningState", false)
+        }),
+      ]
 
       return () => {
         // Cleanup code
@@ -38,11 +40,10 @@ export default defineContentScript({
         sendMessage("triggerReadyState", false)
         console.log("Saved ready state")
         triggerCtrl.abort()
-        console.log("Aborted trigger controller")
+        console.log("Aborted scraping")
         sendMessage("triggerRunningState", false)
         console.log("Saved running state")
-        ctrl.abort()
-        console.log("Aborted main controller")
+        listeners.forEach((dismiss) => dismiss())
       }
     })
   },
@@ -63,7 +64,6 @@ function onReadyForScripting(ctx: ContentScriptContext, cb: WatchForSelectorCall
       ctrl.abort()
     }
   })
-  ctx.addEventListener(window, "beforeunload", ctrl.abort)
   ctx.onInvalidated(ctrl.abort)
 }
 
