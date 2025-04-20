@@ -10,4 +10,10 @@ export default defineBackground(() => {
     if (!tabId) console.error("No tab id found", event.sender)
     activeTabIdStorage.setValue(event.data ? tabId : null)
   })
+  
+  onMessage("triggerRunningState", (event) => {
+    const tabId = event.sender.tab?.id ?? null
+    if (!tabId) console.error("No tab id found", event.sender)
+    runningTabIdStorage.setValue(event.data ? tabId : null)
+  })
 })

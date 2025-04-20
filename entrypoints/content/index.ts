@@ -2,7 +2,8 @@ import { postParentSelector, postSelector, sharedPostSelector } from "@/lib/link
 import type { ContentScriptContext } from "wxt/client"
 import { injectConsole } from "@/utils/inject-console"
 import { handleScraping } from "./handle-scraping"
-import { RemoveListenerCallback } from "@webext-core/messaging"
+import { onMessageExt } from "@/utils/on-message-ext"
+import { WatchForSelectorCallback, watchForSelectors } from "@/utils/watch-for-selectors"
 injectConsole()
 
 const feedUrlWatchPattern = new MatchPattern("*://*.linkedin.com/feed/*")
@@ -12,72 +13,62 @@ export default defineContentScript({
   matches: ["*://*.linkedin.com/*"],
   main(ctx) {
     console.log("Injecting content script")
-    const messageListeners: RemoveListenerCallback[] = []
+    const ctrl = new AbortController()
 
-    onReadyForScripting(ctx, (/** Fires when scraping context is invalidated */ onInvalidated) => {
-      let stopObserver: MutationObserver["disconnect"] | null = null
+    onReadyForScripting(ctx, () => {
+      const triggerCtrl = new AbortController()
       console.log("Ready for script")
       sendMessage("triggerReadyState", true)
 
-      const m1 = onMessage("triggerStart", () => {
-        stopObserver = startObserver()
-        isRunningStorage.setValue(true)
-        console.log(stopObserver, "onStart")
+      onMessageExt(ctrl, "triggerStart", () => {
+        console.log("trigger started")
+        startObserver(triggerCtrl)
+        sendMessage("triggerRunningState", true)
       })
 
-      const m2 = onMessage("triggerStop", () => {
-        stopObserver?.()
-        isRunningStorage.setValue(false)
+      onMessageExt(ctrl, "triggerStop", () => {
+        triggerCtrl.abort()
+        console.log("trigger cancelled")
+        sendMessage("triggerRunningState", false)
       })
 
-      // Add listeners here so that we can remove them at ease
-      messageListeners.push(m1, m2)
-
-      onInvalidated(() => {
-        console.log(stopObserver, "invalidated")
-        console.log("Not ready")
+      return () => {
+        // Cleanup code
+        console.log("Cleaning...")
         sendMessage("triggerReadyState", false)
-        stopObserver?.()
-        isRunningStorage.setValue(false)
-        messageListeners.forEach((cb) => cb())
-      })
+        console.log("Saved ready state")
+        triggerCtrl.abort()
+        console.log("Aborted trigger controller")
+        sendMessage("triggerRunningState", false)
+        console.log("Saved running state")
+        ctrl.abort()
+        console.log("Aborted main controller")
+      }
     })
   },
 })
 
-type OnInvalidated = (cb: () => void) => void
-
 /** Check if we are on the correct page and environment for scraping */
-function onReadyForScripting(ctx: ContentScriptContext, cb: (onInvalidated: OnInvalidated) => void) {
-  const onInvalidated: OnInvalidated = (cb) => {
-    ctx.addEventListener(window, "wxt:locationchange", cb)
-    // When the tab is closed
-    ctx.addEventListener(window, "beforeunload", cb)
-    ctx.onInvalidated(cb)
-  }
-
-  const watchForSelector = (selector: string, cb: () => void) => {
-    const observer = new MutationObserver((_, observer) => {
-      if (document.querySelector(selector)) {
-        observer.disconnect()
-        cb()
-      }
-    })
-    observer.observe(document, { childList: true, subtree: true })
-    ctx.addEventListener(window, "wxt:locationchange", observer.disconnect)
-  }
-
+function onReadyForScripting(ctx: ContentScriptContext, cb: WatchForSelectorCallback) {
+  // To stop the watcher and invoke cleanup function when environment is invalidated
+  const ctrl = new AbortController()
   // Run if initially on target page
-  if (feedUrlWatchPattern.includes(window.location.href)) watchForSelector(postParentSelector, () => cb(onInvalidated))
+  if (feedUrlWatchPattern.includes(window.location.href)) watchForSelectors([postParentSelector], cb, ctrl)
 
   // Run when dynamically navigated to target page
   ctx.addEventListener(window, "wxt:locationchange", ({ newUrl }) => {
-    if (feedUrlWatchPattern.includes(newUrl)) watchForSelector(postParentSelector, () => cb(onInvalidated))
+    if (feedUrlWatchPattern.includes(newUrl)) {
+      watchForSelectors([postParentSelector], cb, ctrl)
+    } else {
+      ctrl.abort()
+    }
   })
+  ctx.addEventListener(window, "beforeunload", ctrl.abort)
+  ctx.onInvalidated(ctrl.abort)
 }
 
 // Main function to run when we are in the feed page
-function startObserver(): MutationObserver["disconnect"] {
+function startObserver({ signal }: { signal?: AbortSignal } = {}): MutationObserver["disconnect"] {
   const rootToObserve = document.querySelector(postParentSelector)!
 
   // fetching initial posts
@@ -108,6 +99,7 @@ function startObserver(): MutationObserver["disconnect"] {
     subtree: true,
   })
 
+  signal?.addEventListener("abort", observer.disconnect)
   return observer.disconnect
 }
 
