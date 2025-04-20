@@ -5,6 +5,7 @@ import HomeTab from "./components/HomeTab"
 import JobListTab from "./components/JobListTab"
 import SettingsTab from "./components/SettingsTab"
 import { JobPost } from "@/utils/job-post-schema"
+import { Toast, ToastProvider } from "@/components/ui/toast"
 
 // Mock data for demonstration
 const mockJobs: JobPost[] = [
@@ -51,15 +52,19 @@ const mockJobs: JobPost[] = [
   ...job,
   postUrl: job.postId,
 }))
+const TABS = {
+  HOME: "home",
+  JOBS: "jobs",
+  SETTINGS: "settings",
+} as const
+type TABSType = (typeof TABS)[keyof typeof TABS]
 
 const App: React.FC = () => {
-  const [activeTab, setActiveTab] = useState("home")
-  const [isRunning, setIsRunning] = useState(false)
+  const [activeTab, setActiveTab] = useState<TABSType>(TABS.HOME)
+
   const [showExportDialog, setShowExportDialog] = useState(false)
 
   // Mock LinkedIn ready state
-  const isReadyState = true
-
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       month: "short",
@@ -75,38 +80,45 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="bg-background text-foreground">
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="grid h-dvh grid-rows-[1fr_max-content]">
-        <TabsContent value="home" className="flex-1 overflow-auto">
-          <div className="p-4">
-            <h1 className="mb-4 text-xl font-bold">LinkedIn Job Scraper</h1>
-            <HomeTab isReadyState={isReadyState} isRunning={isRunning} setIsRunning={setIsRunning} />
-          </div>
-        </TabsContent>
-        <TabsContent value="jobs" className="flex-1 overflow-auto">
-          <JobListTab jobs={mockJobs} formatDate={formatDate} />
-        </TabsContent>
-        <TabsContent value="settings" className="flex-1 overflow-auto">
-          <SettingsTab />
-        </TabsContent>
-        <TabsList className="grid h-14 w-full grid-cols-3">
-          <TabsTrigger value="home" className="data-[state=active]:bg-muted flex flex-col items-center justify-center">
-            <Home className="h-5 w-5" />
-            <span className="mt-1 text-xs">Home</span>
-          </TabsTrigger>
-          <TabsTrigger value="jobs" className="data-[state=active]:bg-muted flex flex-col items-center justify-center">
-            <Briefcase className="h-5 w-5" />
-            <span className="mt-1 text-xs">Jobs</span>
-          </TabsTrigger>
-          <TabsTrigger
-            value="settings"
-            className="data-[state=active]:bg-muted flex flex-col items-center justify-center">
-            <Settings className="h-5 w-5" />
-            <span className="mt-1 text-xs">Settings</span>
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
-    </div>
+    <ToastProvider>
+      <div className="bg-background text-foreground">
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as TABSType)}
+          className="grid h-dvh grid-rows-[1fr_max-content]">
+          <TabsContent value={TABS.HOME} className="flex-1 overflow-auto">
+            <HomeTab />
+          </TabsContent>
+          <TabsContent value={TABS.JOBS} className="flex-1 overflow-auto">
+            <JobListTab jobs={mockJobs} formatDate={formatDate} />
+          </TabsContent>
+          <TabsContent value={TABS.SETTINGS} className="flex-1 overflow-auto">
+            <SettingsTab />
+          </TabsContent>
+          <TabsList className="grid h-14 w-full grid-cols-3">
+            <TabsTrigger
+              value="home"
+              className="data-[state=active]:bg-muted flex flex-col items-center justify-center">
+              <Home className="h-5 w-5" />
+              <span className="mt-1 text-xs">Home</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="jobs"
+              className="data-[state=active]:bg-muted flex flex-col items-center justify-center">
+              <Briefcase className="h-5 w-5" />
+              <span className="mt-1 text-xs">Jobs</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="settings"
+              className="data-[state=active]:bg-muted flex flex-col items-center justify-center">
+              <Settings className="h-5 w-5" />
+              <span className="mt-1 text-xs">Settings</span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+      <Toast />
+    </ToastProvider>
   )
 }
 

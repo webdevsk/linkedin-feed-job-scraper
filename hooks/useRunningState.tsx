@@ -1,20 +1,21 @@
 import { runningTabIdStorage, RunningTabIdStorageValue } from "@/utils/storage"
 
-export const useIsRunningState = (): boolean => {
-  const [isRunning, setIsRunning] = useState<boolean>(false)
+export const useIsRunningState = (): [true, number] | [false, null] => {
+  const [[isRunning, tabId], setState] = useState<[boolean, RunningTabIdStorageValue]>([false, null])
+
   console.log("isRunning", isRunning)
 
   const handleRunningState = async (tabId: RunningTabIdStorageValue) => {
-    if (!tabId) return setIsRunning(false)
+    if (!tabId) return setState([false, null])
 
     try {
       await chrome.tabs.get(tabId)
-      return setIsRunning(true)
+      return setState([true, tabId])
     } catch (error) {
       console.error(error)
       // Assuming tab isn't there
       runningTabIdStorage.setValue(null)
-      return setIsRunning(false)
+      return setState([false, null])
     }
   }
 
@@ -27,5 +28,5 @@ export const useIsRunningState = (): boolean => {
     }
   }, [])
 
-  return isRunning
+  return isRunning ?  [isRunning, tabId as number] : [isRunning, tabId as null]
 }
