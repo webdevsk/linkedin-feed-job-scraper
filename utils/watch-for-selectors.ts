@@ -89,11 +89,15 @@ export function watchForSelectors(
     }
   })
   observer.observe(options.target ?? document, options.observerOptions ?? { childList: true, subtree: true })
-  options.signal?.addEventListener("abort", () => {
-    observer.disconnect()
-    onInvalidated?.()
-  })
-  return observer.disconnect
+  options.signal?.addEventListener(
+    "abort",
+    () => {
+      observer.disconnect()
+      onInvalidated?.()
+    },
+    { once: true }
+  )
+  return observer.disconnect.bind(observer)
 }
 
 /**

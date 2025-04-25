@@ -5,7 +5,7 @@ import HomeTab from "./components/HomeTab"
 import JobListTab from "./components/JobListTab"
 import SettingsTab from "./components/SettingsTab"
 import { JobPost } from "@/utils/job-post-schema"
-import { Toast, ToastProvider } from "@/components/ui/toast"
+import { Toaster } from "@/components/ui/sonner"
 
 // Mock data for demonstration
 const mockJobs: JobPost[] = [
@@ -80,7 +80,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <ToastProvider>
+    <>
       <div className="bg-background text-foreground">
         <Tabs
           value={activeTab}
@@ -117,8 +117,8 @@ const App: React.FC = () => {
           </TabsList>
         </Tabs>
       </div>
-      <Toast />
-    </ToastProvider>
+      <Toaster />
+    </>
   )
 }
 

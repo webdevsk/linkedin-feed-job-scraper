@@ -1,6 +1,6 @@
 import { runningTabIdStorage, RunningTabIdStorageValue } from "@/utils/storage"
 
-export const useIsRunningState = (): [true, number] | [false, null] => {
+export const useRunningState = (): [true, number] | [false, null] => {
   const [[isRunning, tabId], setState] = useState<[boolean, RunningTabIdStorageValue]>([false, null])
 
   console.log("isRunning", isRunning)
@@ -28,5 +28,5 @@ export const useIsRunningState = (): [true, number] | [false, null] => {
     }
   }, [])
 
-  return isRunning ?  [isRunning, tabId as number] : [isRunning, tabId as null]
+  return isRunning ? [isRunning, tabId as number] : [isRunning, tabId as null]
 }

@@ -3,9 +3,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { toast } from "@/hooks/use-toast"
 import { useReadyState } from "@/hooks/useReadyState"
 import { useRunningState } from "@/hooks/useRunningState"
+import { toast } from "sonner"
 
 const HomeTab: React.FC = () => {
   const [isRunningState, runningTabId] = useRunningState()
@@ -25,12 +25,8 @@ const HomeTab: React.FC = () => {
     if (!isReadyState) return
     setIsPending(true)
     sendMessage("triggerStart", undefined, { tabId: readyTabId }).catch((err) => {
-      console.error("Found no listeners for triggerStart", err)
-      toast({
-        title: "Error",
-        description: `Failed to communicate with the tab`,
-        variant: "destructive",
-      })
+      console.error(err)
+      toast.error("Failed to communicate with the tab")
     })
   }
 
@@ -38,12 +34,8 @@ const HomeTab: React.FC = () => {
     if (!isRunningState) return
     setIsPending(true)
     sendMessage("triggerStop", undefined, { tabId: runningTabId }).catch((err) => {
-      console.error("Found no listeners for triggerStop", err)
-      toast({
-        title: "Error",
-        description: "Failed to communicate with the tab",
-        variant: "destructive",
-      })
+      console.error(err)
+      toast.error("Failed to communicate with the tab")
     })
   }
 

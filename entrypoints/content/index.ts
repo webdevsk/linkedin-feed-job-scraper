@@ -3,35 +3,56 @@ import type { ContentScriptContext } from "wxt/client"
 import { injectConsole } from "@/utils/inject-console"
 import { handleScraping } from "./handle-scraping"
 import { WatchForSelectorCallback, watchForSelectors } from "@/utils/watch-for-selectors"
+import { simulateMouseWheelScroll } from "@/utils/natural-scroll-simulation"
 injectConsole()
 
 const feedUrlWatchPattern = new MatchPattern("*://*.linkedin.com/feed/*")
 export const jobPostService = getJobPostService()
-
 export default defineContentScript({
   matches: ["*://*.linkedin.com/*"],
   main(ctx) {
     console.log("Injecting content script")
+    const originalAddEventListener = EventTarget.prototype.addEventListener
+    EventTarget.prototype.addEventListener = function (type, listener, options) {
+      console.log(type)
+      // if (type === 'visibilitychange') {
+      //   // Either don't add the listener or add a no-op
+      //   return;
+      // }
+      return originalAddEventListener.call(this, type, listener, options)
+    }
+
     // initial state. Will change when all the requirements are met
     sendMessage("triggerReadyState", false)
 
     onReadyForScripting(ctx, () => {
-      const triggerCtrl = new AbortController()
+      let dismissObserver: (() => void) | null = null
+      let autoScroll: boolean = false
+
+      const dismissObserverCallback = () => {
+        console.log("stopped")
+        dismissObserver?.()
+        dismissObserver = null
+        autoScroll = false
+        sendMessage("triggerRunningState", false)
+      }
+
       console.log("Ready for script")
       sendMessage("triggerReadyState", true)
 
       const listeners = [
-        onMessage("triggerStart", () => {
+        onMessage("triggerStart", async () => {
           console.log("trigger started")
-          // startObserver(triggerCtrl)
+          dismissObserver = startObserver(dismissObserverCallback)
           sendMessage("triggerRunningState", true)
+          autoScroll = true
+          while (autoScroll) {
+            await simulateMouseWheelScroll(1e3)
+            await new Promise((resolve) => setTimeout(resolve, 3000 + Math.random() * 4000))
+          }
         }),
 
-        onMessage("triggerStop", () => {
-          // triggerCtrl.abort()
-          console.log("trigger cancelled")
-          sendMessage("triggerRunningState", false)
-        }),
+        onMessage("triggerStop", dismissObserverCallback),
       ]
 
       return () => {
@@ -39,7 +60,6 @@ export default defineContentScript({
         console.log("Cleaning...")
         sendMessage("triggerReadyState", false)
         console.log("Saved ready state")
-        triggerCtrl.abort()
         console.log("Aborted scraping")
         sendMessage("triggerRunningState", false)
         console.log("Saved running state")
@@ -50,9 +70,9 @@ export default defineContentScript({
 })
 
 /** Check if we are on the correct page and environment for scraping */
-function onReadyForScripting(ctx: ContentScriptContext, cb: WatchForSelectorCallback) {
+const onReadyForScripting = (ctx: ContentScriptContext, cb: WatchForSelectorCallback) => {
   // To stop the watcher and invoke cleanup function when environment is invalidated
-  const ctrl = new AbortController()
+  let ctrl: AbortController = new AbortController()
   // Run if initially on target page
   if (feedUrlWatchPattern.includes(window.location.href)) watchForSelectors([postParentSelector], cb, ctrl)
 
@@ -61,21 +81,42 @@ function onReadyForScripting(ctx: ContentScriptContext, cb: WatchForSelectorCall
     if (feedUrlWatchPattern.includes(newUrl)) {
       watchForSelectors([postParentSelector], cb, ctrl)
     } else {
-      ctrl.abort()
+      ctrl.abort("Location change")
+      // Reset
+      ctrl = new AbortController()
+      ctrl.signal.throwIfAborted()
     }
   })
   ctx.onInvalidated(ctrl.abort)
 }
 
 // Main function to run when we are in the feed page
-function startObserver({ signal }: { signal?: AbortSignal } = {}): MutationObserver["disconnect"] {
+const startObserver = (dismiss: () => void): (() => void) => {
+  const scrapeLimit: number = 20
+  let scraped: number = 0
+  let stopped: boolean = false
+
+  const scrapeAndCount = (...args: Parameters<typeof handleScraping>): boolean => {
+    console.log("in here", scraped, stopped)
+    if (scraped >= scrapeLimit) {
+      if (!stopped) dismiss()
+      stopped = true
+      return true
+    } else {
+      handleScraping(...args)
+      scraped++
+      console.log("scraped :", scraped)
+      return false
+    }
+  }
+
   const rootToObserve = document.querySelector(postParentSelector)!
 
   // fetching initial posts
   for (const element of rootToObserve.querySelectorAll(postSelector)) {
-    handleScraping(element)
+    if (scrapeAndCount(element)) break // dismiss inside scrapeAndCount only stops the observer but doesnt stop this loop keeping the whole startObserver function running. So we break it when we're done
     const sharedPost = element.querySelector<HTMLDivElement>(sharedPostSelector)
-    if (sharedPost) handleScraping(sharedPost, true)
+    if (sharedPost && scrapeAndCount(sharedPost, true)) break
   }
 
   // fetching new posts dynamically
@@ -84,9 +125,9 @@ function startObserver({ signal }: { signal?: AbortSignal } = {}): MutationObser
       if (!mutation.addedNodes.length) continue
       for (const node of mutation.addedNodes) {
         if (isElement(node) && node.matches(postSelector)) {
-          handleScraping(node)
+          if (scrapeAndCount(node)) return // dismiss inside scrapeAndCount only stops the observer but doesnt stop this loop keeping the whole startObserver function running. So we break it when we're done
           const sharedPost = node.querySelector<HTMLDivElement>(sharedPostSelector)
-          if (sharedPost) handleScraping(sharedPost, true)
+          if (sharedPost && scrapeAndCount(sharedPost, true)) return
         }
       }
     }
@@ -99,8 +140,7 @@ function startObserver({ signal }: { signal?: AbortSignal } = {}): MutationObser
     subtree: true,
   })
 
-  signal?.addEventListener("abort", observer.disconnect)
-  return observer.disconnect
+  return observer.disconnect.bind(observer)
 }
 
 function isElement(node: Node): node is Element {
