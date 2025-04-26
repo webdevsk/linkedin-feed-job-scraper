@@ -1,15 +1,25 @@
 import React from "react"
-import { Trash, Download, ExternalLink, ChevronUp, ChevronDown, Check, X } from "lucide-react"
+import {
+  CirclePlay,
+  Trash,
+  Download,
+  ExternalLink,
+  ChevronUp,
+  ChevronDown,
+  Check,
+  X,
+  Phone,
+  Mail,
+  Globe,
+  Briefcase,
+} from "lucide-react"
 
-interface JobListTabProps {
-  jobs: JobPost[]
-  formatDate: (date: string) => string
-}
-
-const JobListTab: React.FC<JobListTabProps> = ({ jobs, formatDate }) => {
+const JobListTab: React.FC = () => {
   const [selectedJobs, setSelectedJobs] = useState<string[]>([])
   const [expandedJobs, setExpandedJobs] = useState<string[]>([])
   const [showExportDialog, setShowExportDialog] = useState(false)
+  const { jobsMap } = useGetJobsStorage()
+  const jobs = Object.values(jobsMap).toReversed()
 
   const toggleJobExpansion = (jobId: string) => {
     setExpandedJobs((prev) => (prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]))
@@ -75,7 +85,7 @@ const JobListTab: React.FC<JobListTabProps> = ({ jobs, formatDate }) => {
           </div>
         </div>
       </div>
-      <ScrollArea type="always" className="flex-1">
+      <ScrollArea className="flex-1">
         <div className="space-y-2 p-2">
           {jobs.map((job) => (
             <Card
@@ -89,22 +99,25 @@ const JobListTab: React.FC<JobListTabProps> = ({ jobs, formatDate }) => {
                     className="mt-1"
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between">
-                      <div className="max-w-[200px] truncate font-medium">
+                    {/* Job body gets prominence */}
+                    <p className={`text-sm font-medium ${expandedJobs.includes(job.postId) ? "" : "line-clamp-2"}`}>
+                      {job.postBody}
+                    </p>
+
+                    <div className="mt-1 flex items-center justify-between">
+                      <div className="text-muted-foreground max-w-[200px] truncate text-xs">
                         {job.postAuthor?.name || "Unknown Author"}
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="ml-auto h-6 w-6"
-                        onClick={() => window.open(`https://linkedin.com/feed/update/${job.postId}`, "_blank")}>
+                        title="Open on LinkedIn"
+                        onClick={() => window.open(job.postUrl, "_blank")}>
                         <ExternalLink className="h-3.5 w-3.5" />
                       </Button>
                     </div>
-                    <p
-                      className={`text-muted-foreground text-sm ${expandedJobs.includes(job.postId) ? "" : "line-clamp-2"}`}>
-                      {job.postBody}
-                    </p>
+
                     {!expandedJobs.includes(job.postId) && (
                       <div className="text-muted-foreground mt-2 flex items-center justify-between text-xs">
                         <div>
@@ -117,58 +130,76 @@ const JobListTab: React.FC<JobListTabProps> = ({ jobs, formatDate }) => {
                     )}
                   </div>
                 </div>
+
                 {expandedJobs.includes(job.postId) && (
-                  <div className="mt-3 border-t pt-3">
+                  <div className="mt-3 border-t px-6 pt-3">
                     {job.postContents.length > 0 && (
                       <div className="mb-3">
                         <h4 className="mb-2 text-sm font-medium">Attachments:</h4>
-                        <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-2">
                           {job.postContents.map((content, idx) => (
                             <a
                               key={idx}
-                              href={content.url}
+                              href={
+                                content.type === "phone"
+                                  ? "tel:"
+                                  : content.type === "email"
+                                    ? "mailto:"
+                                    : "" + (content.type === "video" ? job.postUrl : content.url)
+                              }
                               target="_blank"
                               rel="noopener noreferrer"
                               className="hover:bg-muted block rounded border p-2">
-                              <div className="flex items-center gap-2">
-                                {content.type === "image" && (
-                                  <div className="bg-muted-foreground/20 flex h-8 w-8 items-center justify-center rounded">
-                                    📷
+                              {content.type === "image" && (
+                                <div className="h-auto w-full">
+                                  <img src={content.url} alt="image" />
+                                </div>
+                              )}
+                              {content.type === "video" && (
+                                <div className="grid h-auto w-full place-content-center *:col-[1/1] *:row-[1/1]">
+                                  <img src={content.thumbnailUrl} alt="video thumbnail" />
+                                  <div className="hover:bg-muted/10 flex items-center justify-center">
+                                    <div className="bg-accent text-accent-foreground rounded-full p-1.5">
+                                      <CirclePlay className="size-10" />
+                                    </div>
                                   </div>
-                                )}
-                                {content.type === "article" && (
-                                  <div className="bg-muted-foreground/20 flex h-8 w-8 items-center justify-center rounded">
-                                    📄
+                                </div>
+                              )}
+                              {content.type !== "image" && content.type !== "video" && (
+                                <div className="flex items-center gap-2">
+                                  <div className="text-muted-foreground flex h-8 w-8 items-center justify-center rounded">
+                                    {
+                                      {
+                                        phone: <Phone />,
+                                        email: <Mail />,
+                                        article: <Globe />,
+                                        job: <Briefcase />,
+                                      }[content.type]
+                                    }
                                   </div>
-                                )}
-                                {content.type === "video" && (
-                                  <div className="bg-muted-foreground/20 flex h-8 w-8 items-center justify-center rounded">
-                                    🎬
-                                  </div>
-                                )}
-                                {content.type === "job" && (
-                                  <div className="bg-muted-foreground/20 flex h-8 w-8 items-center justify-center rounded">
-                                    💼
-                                  </div>
-                                )}
-                                <div className="truncate text-xs">{content.type}</div>
-                              </div>
+                                  <div className="w-0 grow truncate text-xs">{content.url}</div>
+                                </div>
+                              )}
                             </a>
                           ))}
                         </div>
                       </div>
                     )}
+
                     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
                       <div className="text-muted-foreground">Posted:</div>
                       <div>{formatDate(job.postedAt)}</div>
+
                       <div className="text-muted-foreground">First scraped:</div>
                       <div>{formatDate(job.firstScrapedAt)}</div>
+
                       <div className="text-muted-foreground">Last updated:</div>
                       <div>{formatDate(job.updatedAt)}</div>
                     </div>
                   </div>
                 )}
               </div>
+
               <Button
                 variant="ghost"
                 size="sm"

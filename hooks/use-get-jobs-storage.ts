@@ -1,12 +1,12 @@
 type JobStorage = {
-  jobs: Array<JobPostsStorageValue[number]>
+  jobsMap: JobPostsStorageValue
   scrapedCount: number
   lifeTimeScrapedCount: LifeTimeScrapedStorageValue
 }
 
 export const useGetJobsStorage = () => {
   const [data, setData] = useState<JobStorage>({
-    jobs: [],
+    jobsMap: {},
     scrapedCount: 0,
     lifeTimeScrapedCount: 0,
   })
@@ -16,7 +16,7 @@ export const useGetJobsStorage = () => {
     lifeTimeScrapedCount: LifeTimeScrapedStorageValue | undefined
   ) =>
     setData((state) => ({
-      jobs: !jobs ? state.jobs : Object.values(jobs).toReversed(),
+      jobsMap: !jobs ? state.jobsMap : jobs,
       scrapedCount: !jobs ? state.scrapedCount : Object.keys(jobs).length,
       lifeTimeScrapedCount: !lifeTimeScrapedCount ? state.lifeTimeScrapedCount : lifeTimeScrapedCount,
     }))
