@@ -14,6 +14,7 @@ export default defineConfig({
     plugins: [tailwindcss()],
   }),
   imports: {
+    dirs: ["./components", "./components/ui", "./types"],
     eslintrc: {
       enabled: 9,
     },

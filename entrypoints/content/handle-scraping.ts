@@ -1,6 +1,4 @@
 import { LinkedinPost, baseUrl } from "@/lib/linkedin-post-class"
-import { AcceptableJobPostParamsForSubmission } from "@/utils/job-post-service"
-import { jobPostService } from "."
 
 type ScrapedPostData = AcceptableJobPostParamsForSubmission
 

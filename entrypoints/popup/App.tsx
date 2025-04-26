@@ -1,11 +1,8 @@
-import React, { useState } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import React from "react"
 import { Home, Briefcase, Settings } from "lucide-react"
 import HomeTab from "./components/HomeTab"
 import JobListTab from "./components/JobListTab"
 import SettingsTab from "./components/SettingsTab"
-import { JobPost } from "@/utils/job-post-schema"
-import { Toaster } from "@/components/ui/sonner"
 
 // Mock data for demonstration
 const mockJobs: JobPost[] = [
@@ -62,8 +59,6 @@ type TABSType = (typeof TABS)[keyof typeof TABS]
 const App: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TABSType>(TABS.HOME)
 
-  const [showExportDialog, setShowExportDialog] = useState(false)
-
   // Mock LinkedIn ready state
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -73,10 +68,6 @@ const App: React.FC = () => {
       hour: "2-digit",
       minute: "2-digit",
     })
-  }
-
-  const handleExport = () => {
-    setShowExportDialog(true)
   }
 
   return (

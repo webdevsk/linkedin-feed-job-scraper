@@ -1,6 +1,11 @@
-import { GetCurrentScrapeSessionMessage } from "@/types/onconnect-types"
-import { Runtime } from "wxt/browser"
-
+/**
+ * Returns the current scrape session state
+ * @param runningTabId - The tab id of the running tab
+ * @returns
+ * ```typescript
+ * [currentScraped, totalScanned]
+ * ```
+ */
 export const useGetCurrentScrapeSession = (runningTabId: number | null): readonly [number, number] => {
   const [[currentScraped, totalScanned], setSessionState] = useState<[number, number]>([0, 0])
 

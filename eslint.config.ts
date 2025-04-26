@@ -26,6 +26,7 @@ export default defineConfig([
     rules: {
       "@typescript-eslint/no-unused-vars": "warn",
       "prettier/prettier": "off",
+      "react/jsx-no-undef": "off"
     },
   },
 ])

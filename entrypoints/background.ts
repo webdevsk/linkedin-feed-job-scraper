@@ -1,7 +1,3 @@
-// import { registerJobPostService } from "@/utils/job-post-service"
-
-import { activeTabIdStorage } from "@/utils/storage"
-
 export default defineBackground(() => {
   console.log("Hello background!", { id: browser.runtime.id })
   // registerJobPostService()
@@ -17,5 +13,11 @@ export default defineBackground(() => {
     const tabId = event.sender.tab?.id ?? null
     if (!tabId) console.error("No tab id found", event.sender)
     runningTabIdStorage.setValue(event.data ? tabId : null)
+  })
+
+  // Update life time scraped count whenever job posts get updated
+  jobPostsStorage.watch(async (jobStorageObject) => {
+    const prevValue = await lifeTimeScrapedStorage.getValue()
+    lifeTimeScrapedStorage.setValue(prevValue + Object.keys(jobStorageObject).length)
   })
 })

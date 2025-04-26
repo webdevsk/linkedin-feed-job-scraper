@@ -1,19 +1,12 @@
-import React from "react"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Info } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useReadyState } from "@/hooks/use-ready-state"
-import { useRunningState } from "@/hooks/use-running-state"
 import { toast } from "sonner"
-import { useGetCurrentScrapeSession } from "@/hooks/use-get-current-scrape-session"
 
 const HomeTab: React.FC = () => {
   const [isRunningState, runningTabId] = useRunningState()
   const [isReadyState, readyTabId] = useReadyState()
   const [isPending, setIsPending] = useState(false)
   const [currentScraped, totalScanned] = useGetCurrentScrapeSession(runningTabId)
-  const stats = { storageCount: 25, lifetimeCount: 142 }
+  const { scrapedCount, lifeTimeScrapedCount } = useGetJobsStorage()
 
   // The operation depends on external factors so we divide isRunning and triggerRunning into separate functions.
   // triggerStart and triggerStop start the pending state
@@ -65,7 +58,7 @@ const HomeTab: React.FC = () => {
                   <CardTitle className="text-sm">Storage</CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
-                  <p className="text-2xl font-bold">{stats.storageCount}</p>
+                  <p className="text-2xl font-bold">{scrapedCount}</p>
                   <p className="text-muted-foreground text-xs">jobs scraped</p>
                 </CardContent>
               </Card>
@@ -74,7 +67,7 @@ const HomeTab: React.FC = () => {
                   <CardTitle className="text-sm">Lifetime</CardTitle>
                 </CardHeader>
                 <CardContent className="p-4 pt-0">
-                  <p className="text-2xl font-bold">{stats.lifetimeCount}</p>
+                  <p className="text-2xl font-bold">{lifeTimeScrapedCount}</p>
                   <p className="text-muted-foreground text-xs">jobs scraped</p>
                 </CardContent>
               </Card>

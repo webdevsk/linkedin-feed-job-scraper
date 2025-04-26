@@ -9,3 +9,9 @@ export const activeTabIdStorage = storage.defineItem<ActiveTabIdStorageValue>("l
 
 export type RunningTabIdStorageValue = number | null
 export const runningTabIdStorage = storage.defineItem<RunningTabIdStorageValue>("local:runningTabId")
+
+export type LifeTimeScrapedStorageValue = number
+export const lifeTimeScrapedStorage = storage.defineItem<LifeTimeScrapedStorageValue>("local:lifeTimeScraped", {
+  init: () => jobPostsStorage.getValue().then((jobPostsObject) => Object.keys(jobPostsObject).length),
+  fallback: 0,
+})

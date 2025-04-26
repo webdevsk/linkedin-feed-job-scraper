@@ -1,11 +1,7 @@
 import { postParentSelector, postSelector, sharedPostSelector } from "@/lib/linkedin-post-class"
 import type { ContentScriptContext } from "wxt/client"
-import { injectConsole } from "@/utils/inject-console"
 import { handleScraping } from "./handle-scraping"
-import { WatchForSelectorCallback, watchForSelectors } from "@/utils/watch-for-selectors"
-import { simulateMouseWheelScroll } from "@/utils/natural-scroll-simulation"
 import { Runtime } from "wxt/browser"
-import { GetCurrentScrapeSessionMessage } from "@/types/onconnect-types"
 
 const feedUrlWatchPattern = new MatchPattern("*://*.linkedin.com/feed/*")
 export const jobPostService = getJobPostService()
