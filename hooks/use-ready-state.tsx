@@ -2,14 +2,13 @@ import { ActiveTabIdStorageValue } from "@/utils/storage"
 
 export const useReadyState = (): [true, number] | [false, null] => {
   const [[isReady, tabId], setState] = useState<[boolean, ActiveTabIdStorageValue]>([false, null])
-  console.log("isReady", isReady)
 
   const handleReadyState = async (tabId: ActiveTabIdStorageValue) => {
     if (!tabId) return setState([false, null])
 
     try {
       const tab = await chrome.tabs.get(tabId)
-      if (!tab.active) return  
+      if (!tab.active) return
       return setState([true, tabId])
     } catch (error) {
       console.error(error)

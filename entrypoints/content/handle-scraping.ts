@@ -2,19 +2,20 @@ import { LinkedinPost, baseUrl } from "@/lib/linkedin-post-class"
 import { AcceptableJobPostParamsForSubmission } from "@/utils/job-post-service"
 import { jobPostService } from "."
 
-export async function handleScraping(element: Element, isReshared: boolean = false) {
-  // whatever we wanna do with each post
-  let post: LinkedinPost | null = new LinkedinPost(element, { isReshared })
+type ScrapedPostData = AcceptableJobPostParamsForSubmission
 
-  // Recurse when a reshared post is found
-  // This throws for some reason when any imported modules like jobPostService is called within
-  // if (!isReshared) {
-  //   const sharedPost = post.fetchSharedPost()
-  //   if (sharedPost) handleScraping(sharedPost, true)
-  // }
+/** Scrapes a post for job posting data.
+ * @param element - The post element to scrape
+ * @param isReshared - Whether the post is a reshared post
+ * @returns The scraped post data or null if the post is not a hiring post
+ */
+export const handleScraping = (element: Element, isReshared: boolean = false): ScrapedPostData | null => {
+  let post: LinkedinPost | null = new LinkedinPost(element, { isReshared })
+  let scrapedPostData: ScrapedPostData | null = null
+
   try {
     const isHiringPost = post.checkIfHiringPost()
-    if (!isHiringPost) return
+    if (!isHiringPost) return null
 
     post.element.insertAdjacentHTML(
       "beforeend",
@@ -33,18 +34,19 @@ export async function handleScraping(element: Element, isReshared: boolean = fal
       postedAt: post.getPostPostedAt(),
     }
     console.table(data)
-    const res = await jobPostService.postJobs([data])
-    console.log(res)
-    if (res.status === "error") throw new Error(res.error)
+    scrapedPostData = data
   } catch (error) {
     console.error(error)
+    scrapedPostData = null
   } finally {
     // Memory cleanup
     post.dispose()
     post = null
   }
+  return scrapedPostData
 }
-export function generatePostContents(post: LinkedinPost): AcceptableJobPostParamsForSubmission["postContents"] {
+
+const generatePostContents = (post: LinkedinPost): AcceptableJobPostParamsForSubmission["postContents"] => {
   type ThisFnReturnType = ReturnType<typeof generatePostContents>
   const postContents: ThisFnReturnType = []
   postContents.push(...post.getContactInfo())

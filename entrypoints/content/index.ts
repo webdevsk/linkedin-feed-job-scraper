@@ -4,23 +4,16 @@ import { injectConsole } from "@/utils/inject-console"
 import { handleScraping } from "./handle-scraping"
 import { WatchForSelectorCallback, watchForSelectors } from "@/utils/watch-for-selectors"
 import { simulateMouseWheelScroll } from "@/utils/natural-scroll-simulation"
-injectConsole()
+import { Runtime } from "wxt/browser"
+import { GetCurrentScrapeSessionMessage } from "@/types/onconnect-types"
 
 const feedUrlWatchPattern = new MatchPattern("*://*.linkedin.com/feed/*")
 export const jobPostService = getJobPostService()
 export default defineContentScript({
   matches: ["*://*.linkedin.com/*"],
   main(ctx) {
+    injectConsole()
     console.log("Injecting content script")
-    const originalAddEventListener = EventTarget.prototype.addEventListener
-    EventTarget.prototype.addEventListener = function (type, listener, options) {
-      console.log(type)
-      // if (type === 'visibilitychange') {
-      //   // Either don't add the listener or add a no-op
-      //   return;
-      // }
-      return originalAddEventListener.call(this, type, listener, options)
-    }
 
     // initial state. Will change when all the requirements are met
     sendMessage("triggerReadyState", false)
@@ -28,14 +21,22 @@ export default defineContentScript({
     onReadyForScripting(ctx, () => {
       let dismissObserver: (() => void) | null = null
       let autoScroll: boolean = false
+      let scrapedPostCount: number = 0
+      let scannedPostCount: number = 0
 
-      const dismissObserverCallback = () => {
-        console.log("stopped")
-        dismissObserver?.()
-        dismissObserver = null
-        autoScroll = false
-        sendMessage("triggerRunningState", false)
+      /** For sending current session state to popup */
+      let portForScrapeSession: Runtime.Port | null = null
+      const setPortCallback = (port: Runtime.Port) => {
+        console.log("Listening for ports: ", port)
+        if (port.name === "getCurrentScrapeSession") {
+          portForScrapeSession = port
+        }
+        port.onDisconnect.addListener(() => {
+          console.log("port disconnected by popup")
+          portForScrapeSession = null
+        })
       }
+      browser.runtime.onConnect.addListener(setPortCallback)
 
       console.log("Ready for script")
       sendMessage("triggerReadyState", true)
@@ -43,27 +44,63 @@ export default defineContentScript({
       const listeners = [
         onMessage("triggerStart", async () => {
           console.log("trigger started")
-          dismissObserver = startObserver(dismissObserverCallback)
-          sendMessage("triggerRunningState", true)
-          autoScroll = true
-          while (autoScroll) {
-            await simulateMouseWheelScroll(1e3)
-            await new Promise((resolve) => setTimeout(resolve, 3000 + Math.random() * 4000))
+          scrapedPostCount = 0
+          scannedPostCount = 0
+          try {
+            // Telling service worker to save the running state along with our tabId. It should throw if the connection fails
+            await sendMessage("triggerRunningState", true)
+            // Starts the mutation observer
+            dismissObserver = startObserver((element) => {
+              // Scrape the main post
+              const scrapedPost = handleScraping(element)
+              scannedPostCount++
+              if (scrapedPost) {
+                scrapedPostCount++
+                jobPostService.postJobs([scrapedPost])
+              }
+              // Scrape any shared post by the main post
+              const sharedPost = element.querySelector<HTMLDivElement>(sharedPostSelector)
+              if (sharedPost) {
+                scannedPostCount++
+                const scrapedPost = handleScraping(sharedPost, true)
+                if (scrapedPost !== null) {
+                  scrapedPostCount++
+                  jobPostService.postJobs([scrapedPost])
+                }
+              }
+              // Update popup ui
+              portForScrapeSession?.postMessage({
+                scrapedPostCount,
+                scannedPostCount,
+              } satisfies GetCurrentScrapeSessionMessage)
+            })
+
+            // Start auto scrolling for the oberver to catch new elements
+            autoScroll = true
+            while (autoScroll) {
+              await simulateMouseWheelScroll(1e3)
+              await sleep(3e3, 7e3)
+            }
+          } catch (error) {
+            console.error(error)
           }
         }),
 
-        onMessage("triggerStop", dismissObserverCallback),
+        onMessage("triggerStop", async () => {
+          console.log("stopped")
+          dismissObserver?.()
+          autoScroll = false
+          sendMessage("triggerRunningState", false)
+        }),
       ]
 
       return () => {
         // Cleanup code
-        console.log("Cleaning...")
         sendMessage("triggerReadyState", false)
-        console.log("Saved ready state")
-        console.log("Aborted scraping")
         sendMessage("triggerRunningState", false)
-        console.log("Saved running state")
         listeners.forEach((dismiss) => dismiss())
+        portForScrapeSession?.disconnect()
+        browser.runtime.onConnect.removeListener(setPortCallback)
       }
     })
   },
@@ -90,44 +127,33 @@ const onReadyForScripting = (ctx: ContentScriptContext, cb: WatchForSelectorCall
   ctx.onInvalidated(ctrl.abort)
 }
 
-// Main function to run when we are in the feed page
-const startObserver = (dismiss: () => void): (() => void) => {
-  const scrapeLimit: number = 20
-  let scraped: number = 0
-  let stopped: boolean = false
-
-  const scrapeAndCount = (...args: Parameters<typeof handleScraping>): boolean => {
-    console.log("in here", scraped, stopped)
-    if (scraped >= scrapeLimit) {
-      if (!stopped) dismiss()
-      stopped = true
-      return true
-    } else {
-      handleScraping(...args)
-      scraped++
-      console.log("scraped :", scraped)
-      return false
-    }
-  }
-
+/**
+ * Starts an observer to scrape posts
+ * @param cb - Callback function to handle scraped posts
+ * @returns A function to stop the observer
+ */
+const startObserver = (cb: (element: Element) => void): (() => void) => {
+  let isDoneFlag: boolean = false
+  let firstRun: boolean = true
   const rootToObserve = document.querySelector(postParentSelector)!
 
-  // fetching initial posts
-  for (const element of rootToObserve.querySelectorAll(postSelector)) {
-    if (scrapeAndCount(element)) break // dismiss inside scrapeAndCount only stops the observer but doesnt stop this loop keeping the whole startObserver function running. So we break it when we're done
-    const sharedPost = element.querySelector<HTMLDivElement>(sharedPostSelector)
-    if (sharedPost && scrapeAndCount(sharedPost, true)) break
+  if (firstRun) {
+    // fetching initial posts
+    for (const element of rootToObserve.querySelectorAll(postSelector)) {
+      if (isDoneFlag) break
+      cb(element)
+    }
   }
 
   // fetching new posts dynamically
   const callback: MutationCallback = (mutationList) => {
     for (const mutation of mutationList) {
+      if (isDoneFlag) return
       if (!mutation.addedNodes.length) continue
       for (const node of mutation.addedNodes) {
+        if (isDoneFlag) return
         if (isElement(node) && node.matches(postSelector)) {
-          if (scrapeAndCount(node)) return // dismiss inside scrapeAndCount only stops the observer but doesnt stop this loop keeping the whole startObserver function running. So we break it when we're done
-          const sharedPost = node.querySelector<HTMLDivElement>(sharedPostSelector)
-          if (sharedPost && scrapeAndCount(sharedPost, true)) return
+          cb(node)
         }
       }
     }
@@ -140,9 +166,14 @@ const startObserver = (dismiss: () => void): (() => void) => {
     subtree: true,
   })
 
-  return observer.disconnect.bind(observer)
+  return () => {
+    observer.disconnect()
+    isDoneFlag = true
+    firstRun = false
+  }
 }
 
-function isElement(node: Node): node is Element {
-  return node.nodeType === Node.ELEMENT_NODE
-}
+const isElement = (node: Node): node is Element => node.nodeType === Node.ELEMENT_NODE
+/** Sleeps for a random time between min and max */
+const sleep = (min: number, max: number) =>
+  new Promise((resolve) => setTimeout(resolve, min + Math.random() * (max - min)))

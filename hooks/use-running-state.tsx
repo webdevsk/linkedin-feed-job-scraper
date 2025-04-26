@@ -3,8 +3,6 @@ import { runningTabIdStorage, RunningTabIdStorageValue } from "@/utils/storage"
 export const useRunningState = (): [true, number] | [false, null] => {
   const [[isRunning, tabId], setState] = useState<[boolean, RunningTabIdStorageValue]>([false, null])
 
-  console.log("isRunning", isRunning)
-
   const handleRunningState = async (tabId: RunningTabIdStorageValue) => {
     if (!tabId) return setState([false, null])
 

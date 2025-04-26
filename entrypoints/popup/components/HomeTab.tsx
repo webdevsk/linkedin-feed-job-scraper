@@ -3,20 +3,17 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { useReadyState } from "@/hooks/useReadyState"
-import { useRunningState } from "@/hooks/useRunningState"
+import { useReadyState } from "@/hooks/use-ready-state"
+import { useRunningState } from "@/hooks/use-running-state"
 import { toast } from "sonner"
+import { useGetCurrentScrapeSession } from "@/hooks/use-get-current-scrape-session"
 
 const HomeTab: React.FC = () => {
   const [isRunningState, runningTabId] = useRunningState()
   const [isReadyState, readyTabId] = useReadyState()
   const [isPending, setIsPending] = useState(false)
-  const stats = {
-    currentScraped: 3,
-    totalScanned: 15,
-    storageCount: 25,
-    lifetimeCount: 142,
-  }
+  const [currentScraped, totalScanned] = useGetCurrentScrapeSession(runningTabId)
+  const stats = { storageCount: 25, lifetimeCount: 142 }
 
   // The operation depends on external factors so we divide isRunning and triggerRunning into separate functions.
   // triggerStart and triggerStop start the pending state
@@ -92,8 +89,8 @@ const HomeTab: React.FC = () => {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-lg font-bold">Found {stats.currentScraped} jobs</p>
-                    <p className="text-muted-foreground text-sm">out of {stats.totalScanned} posts</p>
+                    <p className="text-lg font-bold">Found {currentScraped} jobs</p>
+                    <p className="text-muted-foreground text-sm">out of {totalScanned} posts</p>
                   </div>
                   <div className="animate-pulse">
                     <div className="h-2 w-2 rounded-full bg-green-500"></div>
