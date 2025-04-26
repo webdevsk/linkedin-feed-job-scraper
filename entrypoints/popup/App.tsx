@@ -1,8 +1,5 @@
 import React from "react"
-import { Home, Briefcase, Settings } from "lucide-react"
-import HomeTab from "./components/HomeTab"
-import JobListTab from "./components/JobListTab"
-import SettingsTab from "./components/SettingsTab"
+import HomeTab from "./_components/home-tab"
 
 const TABS = {
   HOME: "home",
@@ -24,32 +21,15 @@ const App: React.FC = () => {
           <TabsContent value={TABS.HOME} className="flex-1 overflow-auto">
             <HomeTab />
           </TabsContent>
-          <TabsContent value={TABS.JOBS} className="flex-1 overflow-auto">
-            <JobListTab />
-          </TabsContent>
-          <TabsContent value={TABS.SETTINGS} className="flex-1 overflow-auto">
-            <SettingsTab />
-          </TabsContent>
-          <TabsList className="grid h-14 w-full grid-cols-3">
+          {/* No need to show as only one for now */}
+          {/* <TabsList className="grid h-14 w-full grid-cols-3">
             <TabsTrigger
               value="home"
               className="data-[state=active]:bg-muted flex flex-col items-center justify-center">
               <Home className="h-5 w-5" />
               <span className="mt-1 text-xs">Home</span>
             </TabsTrigger>
-            <TabsTrigger
-              value="jobs"
-              className="data-[state=active]:bg-muted flex flex-col items-center justify-center">
-              <Briefcase className="h-5 w-5" />
-              <span className="mt-1 text-xs">Jobs</span>
-            </TabsTrigger>
-            <TabsTrigger
-              value="settings"
-              className="data-[state=active]:bg-muted flex flex-col items-center justify-center">
-              <Settings className="h-5 w-5" />
-              <span className="mt-1 text-xs">Settings</span>
-            </TabsTrigger>
-          </TabsList>
+          </TabsList> */}
         </Tabs>
       </div>
       <Toaster />

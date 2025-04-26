@@ -64,7 +64,7 @@ export class LinkedinPost {
   }
 
   private fetchPostBody(): HTMLDivElement | null {
-    const postBody = this.element.querySelector<HTMLDivElement>(".feed-shared-update-v2__description")
+    const postBody = this.element.querySelector<HTMLDivElement>(".update-components-update-v2__commentary")
     if (!postBody) {
       postBodyNotFoundCounter++
       console.log("Could not find post body", this.element)

@@ -1,6 +1,14 @@
 import { Info } from "lucide-react"
 import { toast } from "sonner"
 
+const openOptionsPage = () => {
+  if (window.chrome?.runtime?.openOptionsPage) {
+    window.chrome.runtime.openOptionsPage()
+  } else {
+    window.open("/options/index.html", "_blank")
+  }
+}
+
 const HomeTab: React.FC = () => {
   const [isRunningState, runningTabId] = useRunningState()
   const [isReadyState, readyTabId] = useReadyState()
@@ -41,7 +49,7 @@ const HomeTab: React.FC = () => {
         {!isRunningState ? (
           <>
             {!isReadyState && (
-              <Alert className="mb-4">
+              <Alert>
                 <Info className="h-4 w-4" />
                 <AlertTitle>Not on LinkedIn</AlertTitle>
                 <AlertDescription>Please visit LinkedIn and then activate this extension.</AlertDescription>
@@ -93,6 +101,12 @@ const HomeTab: React.FC = () => {
             </Card>
           </>
         )}
+
+        <div className="mb-4 flex gap-2">
+          <Button variant="outline" onClick={openOptionsPage} className="w-full">
+            Dashboard
+          </Button>
+        </div>
       </div>
     </div>
   )
