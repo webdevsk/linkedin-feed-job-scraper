@@ -1,35 +1,38 @@
 type JobStorage = {
-  jobsMap: JobPostsStorageValue
+  jobs: JobPost[]
   scrapedCount: number
   lifeTimeScrapedCount: LifeTimeScrapedStorageValue
 }
+const jobPostService = getJobPostService()
 
 export const useGetJobsStorage = () => {
   const [data, setData] = useState<JobStorage>({
-    jobsMap: {},
+    jobs: [],
     scrapedCount: 0,
     lifeTimeScrapedCount: 0,
   })
 
-  const handleStorage = (
-    jobs: JobPostsStorageValue | undefined,
-    lifeTimeScrapedCount: LifeTimeScrapedStorageValue | undefined
-  ) =>
+  const handleStorage = (jobs: JobPost[] | undefined, lifeTimeScrapedCount: LifeTimeScrapedStorageValue | undefined) =>
     setData((state) => ({
-      jobsMap: !jobs ? state.jobsMap : jobs,
+      jobs: !jobs ? state.jobs : jobs,
       scrapedCount: !jobs ? state.scrapedCount : Object.keys(jobs).length,
       lifeTimeScrapedCount: !lifeTimeScrapedCount ? state.lifeTimeScrapedCount : lifeTimeScrapedCount,
     }))
 
   useEffect(() => {
-    storage.getItems([jobPostsStorage, lifeTimeScrapedStorage]).then(([jobs, lifeTimeScrapedCount]) => {
-      console.log(jobs, lifeTimeScrapedCount)
-      handleStorage(jobs.value, lifeTimeScrapedCount.value)
-    })
+    // initial fetches
+    jobPostService.listJobs().then((res) => res.status === STATUS.SUCCESS && handleStorage(res.data, undefined))
+    lifeTimeScrapedStorage
+      .getValue()
+      .then((value) => handleStorage(undefined, value))
+      .catch((error) => console.error("Failed to get life time scraped count", error))
+
+    // onchange
     const watchers = [
-      jobPostsStorage.watch((jobs) => handleStorage(jobs, undefined)),
+      jobPostService.watchJobs((newValue) => handleStorage(newValue, undefined)),
       lifeTimeScrapedStorage.watch((lifeTimeScrapedCount) => handleStorage(undefined, lifeTimeScrapedCount)),
     ]
+
     return () => {
       watchers.forEach((dismiss) => dismiss())
     }

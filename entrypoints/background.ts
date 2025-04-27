@@ -14,10 +14,4 @@ export default defineBackground(() => {
     if (!tabId) console.error("No tab id found", event.sender)
     runningTabIdStorage.setValue(event.data ? tabId : null)
   })
-
-  // Update life time scraped count whenever job posts get updated
-  jobPostsStorage.watch(async (jobStorageObject) => {
-    const prevValue = await lifeTimeScrapedStorage.getValue()
-    lifeTimeScrapedStorage.setValue(prevValue + Object.keys(jobStorageObject).length)
-  })
 })

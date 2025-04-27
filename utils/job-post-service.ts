@@ -2,7 +2,7 @@
 
 import { z } from "zod"
 
-const STATUS = {
+export const STATUS = {
   SUCCESS: "success",
   ERROR: "error",
 } as const
@@ -52,7 +52,14 @@ class JobPostService {
   async listJobs(): ApiResponse<JobPost[]> {
     try {
       const storage = await jobPostsStorage.getValue()
-      return { status: STATUS.SUCCESS, data: Object.values(storage) }
+      const data = []
+      for (const jobPost of Object.values(storage).toReversed()) {
+        const parsedJobPost = jobPostSchema.safeParse(jobPost)
+        if (parsedJobPost.success) {
+          data.push(parsedJobPost.data)
+        }
+      }
+      return { status: STATUS.SUCCESS, data }
     } catch (error) {
       console.error(error)
       return { status: STATUS.ERROR, error: "Failed to list job posts" }
@@ -62,13 +69,30 @@ class JobPostService {
   watchJobs(
     callback: (
       newValue: JobPost[],
-      oldValue: JobPost[],
+      oldValue: () => JobPost[],
       newDataMap: Record<JobPost["postId"], JobPost>,
       oldDataMap: Record<JobPost["postId"], JobPost>
     ) => void
   ): Unwatch {
     return jobPostsStorage.watch((newValue, oldValue) => {
-      callback(Object.values(newValue), Object.values(oldValue), newValue, oldValue)
+      const newJobsList: JobPost[] = []
+      for (const jobPost of Object.values(newValue).toReversed()) {
+        const parsedJobPost = jobPostSchema.safeParse(jobPost)
+        if (parsedJobPost.success) {
+          newJobsList.push(parsedJobPost.data)
+        }
+      }
+      const getOldJobsList = () => {
+        const oldJobsList: JobPost[] = []
+        for (const jobPost of Object.values(oldValue).toReversed()) {
+          const parsedJobPost = jobPostSchema.safeParse(jobPost)
+          if (parsedJobPost.success) {
+            oldJobsList.push(parsedJobPost.data)
+          }
+        }
+        return oldJobsList
+      }
+      callback(newJobsList, getOldJobsList, newValue, oldValue)
     })
   }
 
@@ -98,6 +122,11 @@ class JobPostService {
         }
       }
       await jobPostsStorage.setValue(storage)
+
+      await lifeTimeScrapedStorage
+        .getValue()
+        .then((prevValue) => lifeTimeScrapedStorage.setValue(prevValue + data.length))
+
       return { status: STATUS.SUCCESS, data }
     } catch (error) {
       console.error(error)

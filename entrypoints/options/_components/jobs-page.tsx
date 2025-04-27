@@ -22,8 +22,7 @@ const iconMap = {
 export const JobsPage: React.FC = () => {
   const [selectedJobs, setSelectedJobs] = React.useState<string[]>([])
   const [expandedJobs, setExpandedJobs] = React.useState<string[]>([])
-  const { jobsMap } = useGetJobsStorage()
-  const jobs = Object.values(jobsMap)
+  const { jobs } = useGetJobsStorage()
 
   const toggleJobExpansion = (jobId: string) => {
     setExpandedJobs((prev) => (prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]))

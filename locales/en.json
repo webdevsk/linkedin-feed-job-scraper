@@ -5,7 +5,7 @@
   "extension_description": {
     "message": "Scrape Job posts from Linkedin Feed"
   },
-  "__MSG_options_page_title__": {
+  "options_page_title": {
     "message": "Dashboard - Linkedin Feed Job Scraper"
   }
 }

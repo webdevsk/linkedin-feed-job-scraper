@@ -87,7 +87,7 @@ const HomeTab: React.FC = () => {
               Stop Scraping
             </Button>
             <Card>
-              <CardContent className="p-4">
+              <CardContent className={cn("p-4", currentScraped === 0 && totalScanned === 0 && "animate-pulse")}>
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-lg font-bold">Found {currentScraped} jobs</p>
