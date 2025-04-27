@@ -5,6 +5,7 @@ import App from "./App.tsx"
 import "@fontsource-variable/inter"
 import "@/assets/style.css"
 
+document.title = i18n.t("options_page_title")
 createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <BrowserRouter>

@@ -5,6 +5,7 @@ import App from "./App.tsx"
 import "@fontsource-variable/inter"
 import "@/assets/style.css"
 
+document.title = i18n.t("extension_name")
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
     <App />
