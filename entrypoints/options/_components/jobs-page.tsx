@@ -11,6 +11,7 @@ import {
   Globe,
   Briefcase,
 } from "lucide-react"
+import { exportFunctions } from "../_utils/export-functions"
 
 const iconMap = {
   phone: <Phone />,
@@ -20,28 +21,56 @@ const iconMap = {
 }
 
 export const JobsPage: React.FC = () => {
-  const [selectedJobs, setSelectedJobs] = React.useState<string[]>([])
-  const [expandedJobs, setExpandedJobs] = React.useState<string[]>([])
+  const [selectedJobIds, setSelectedJobIds] = useState<string[]>([])
+  const [expandedJobIds, setExpandedJobIds] = useState<string[]>([])
   const { jobs } = useGetJobsStorage()
 
   const toggleJobExpansion = (jobId: string) => {
-    setExpandedJobs((prev) => (prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]))
+    setExpandedJobIds((prev) => (prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]))
   }
 
   const toggleJobSelection = (jobId: string) => {
-    setSelectedJobs((prev) => (prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]))
+    setSelectedJobIds((prev) => (prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]))
   }
 
   const selectAllJobs = () => {
-    setSelectedJobs(jobs.map((job) => job.postId))
+    setSelectedJobIds(jobs.map((job) => job.postId))
   }
 
   const deselectAllJobs = () => {
-    setSelectedJobs([])
+    setSelectedJobIds([])
   }
 
   const deleteSelectedJobs = () => {
-    setSelectedJobs([])
+    setSelectedJobIds([])
+  }
+
+  const exportOptions: Partial<Record<keyof typeof exportFunctions, () => void | Promise<void>>> = {
+    json: () => {
+      exportFunctions.json(jobs.filter((job) => selectedJobIds.includes(job.postId)))
+    },
+    csv: () => {
+      exportFunctions.csv(
+        jobs
+          .filter((job) => selectedJobIds.includes(job.postId))
+          .map((job) => ({
+            ...job,
+            // converting postContent object into just string url
+            postContents: job.postContents.map((content) => content.url ?? content.thumbnailUrl ?? ""),
+          }))
+      )
+    },
+    xlsx: async () => {
+      await exportFunctions.xlsx(
+        jobs
+          .filter((job) => selectedJobIds.includes(job.postId))
+          .map((job) => ({
+            ...job,
+            // converting postContent object into just string url
+            postContents: job.postContents.map((content) => content.url ?? content.thumbnailUrl ?? ""),
+          }))
+      )
+    },
   }
 
   return (
@@ -53,10 +82,14 @@ export const JobsPage: React.FC = () => {
         </div>
         <div className="flex items-center justify-between">
           <div className="space-x-2">
-            <Button variant="outline" size="sm" onClick={selectAllJobs} disabled={selectedJobs.length === jobs.length}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={selectAllJobs}
+              disabled={selectedJobIds.length === jobs.length}>
               Select All
             </Button>
-            <Button variant="outline" size="sm" onClick={deselectAllJobs} disabled={selectedJobs.length === 0}>
+            <Button variant="outline" size="sm" onClick={deselectAllJobs} disabled={selectedJobIds.length === 0}>
               Deselect All
             </Button>
           </div>
@@ -65,20 +98,32 @@ export const JobsPage: React.FC = () => {
               variant="destructive"
               size="icon"
               className="h-8 w-8"
-              disabled={selectedJobs.length === 0}
+              disabled={selectedJobIds.length === 0}
               onClick={deleteSelectedJobs}>
               <Trash className="h-4 w-4" />
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="icon" className="h-8 w-8" disabled={selectedJobs.length === 0}>
+                <Button variant="outline" size="icon" className="h-8 w-8" disabled={selectedJobIds.length === 0}>
                   <Download className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>Export as JSON</DropdownMenuItem>
-                <DropdownMenuItem>Export as CSV</DropdownMenuItem>
-                <DropdownMenuItem>Export to Google Sheets</DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <button className="w-full cursor-pointer" onClick={exportOptions.json}>
+                    Export as JSON
+                  </button>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <button className="w-full cursor-pointer" onClick={exportOptions.csv}>
+                    Export as CSV
+                  </button>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <button className="w-full cursor-pointer" onClick={exportOptions.xlsx}>
+                    Export as XLSX
+                  </button>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -90,14 +135,14 @@ export const JobsPage: React.FC = () => {
             <div className="p-3">
               <div className="flex items-start gap-2">
                 <Checkbox
-                  checked={selectedJobs.includes(job.postId)}
+                  checked={selectedJobIds.includes(job.postId)}
                   onCheckedChange={() => toggleJobSelection(job.postId)}
                   className="mt-1"
                 />
                 <div className="min-w-0 flex-1">
                   {/* Job body gets prominence */}
                   <p
-                    className={`mt-0.5 text-sm font-medium ${expandedJobs.includes(job.postId) ? "whitespace-break-spaces" : "line-clamp-2 whitespace-normal"}`}>
+                    className={`mt-0.5 text-sm font-medium ${expandedJobIds.includes(job.postId) ? "whitespace-break-spaces" : "line-clamp-2 whitespace-normal"}`}>
                     {job.postBody}
                   </p>
 
@@ -115,7 +160,7 @@ export const JobsPage: React.FC = () => {
                     </Button>
                   </div>
 
-                  {!expandedJobs.includes(job.postId) && (
+                  {!expandedJobIds.includes(job.postId) && (
                     <div className="text-muted-foreground mt-2 flex items-center justify-between text-xs">
                       <div className="flex flex-wrap items-center gap-1">
                         {!!job.postContents.length &&
@@ -136,7 +181,7 @@ export const JobsPage: React.FC = () => {
                 </div>
               </div>
 
-              {expandedJobs.includes(job.postId) && (
+              {expandedJobIds.includes(job.postId) && (
                 <div className="mt-3 border-t px-6 pt-3">
                   {job.postContents.length > 0 && (
                     <div className="mb-3">
@@ -211,7 +256,7 @@ export const JobsPage: React.FC = () => {
               size="sm"
               className="h-6 w-full rounded-none border-t"
               onClick={() => toggleJobExpansion(job.postId)}>
-              {expandedJobs.includes(job.postId) ? (
+              {expandedJobIds.includes(job.postId) ? (
                 <ChevronUp className="h-4 w-4" />
               ) : (
                 <ChevronDown className="h-4 w-4" />
